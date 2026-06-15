@@ -80,7 +80,6 @@ export default function AssessmentPage() {
   const [errorInfo, setErrorInfo] = useState<FriendlyError | null>(null);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
 
-  // Auto-rotate loading messages for better UX
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isProcessing) {
@@ -100,7 +99,6 @@ export default function AssessmentPage() {
       setErrorInfo(null);
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') return;
-      
       const friendlyError = getFriendlyAuthErrorMessage(err.code);
       setErrorInfo(friendlyError);
     }
@@ -123,25 +121,25 @@ export default function AssessmentPage() {
         primaryGoal: finalAnswers.primaryGoal,
       });
 
-      // Save result to Firestore asynchronously
       if (user && db) {
-        setDoc(doc(db, "results", user.uid), {
+        await setDoc(doc(db, "results", user.uid), {
           ...result,
           userId: user.uid,
           createdAt: serverTimestamp(),
-        }, { merge: true }).catch(() => {});
+        }, { merge: true });
       }
       
       localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
       router.push("/dashboard");
     } catch (err: any) {
+      console.error("Submission Error:", err);
       setIsProcessing(false);
       setErrorInfo({
-        message: "حدث خطأ في توليد التقرير الاستشاري",
+        message: err.message || "حدث خطأ غير متوقع في توليد التقرير الاستشاري",
         steps: [
           "تأكد من استقرار اتصالك بالإنترنت.",
-          "قد يكون هناك ضغط عالٍ على خوادم الذكاء الاصطناعي، يرجى الانتظار دقيقة.",
-          "إذا تكرر الخطأ، جرب تحديث الصفحة وبدء التقييم مجدداً."
+          "تحقق من صحة مفاتيح API الخاصة بالذكاء الاصطناعي في الإعدادات.",
+          "إذا تكرر الخطأ، جرب المحاولة بعد دقيقة واحدة لتجاوز حدود الاستخدام."
         ]
       });
     }
@@ -194,7 +192,7 @@ export default function AssessmentPage() {
             <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20">
                <AlertCircle className="w-10 h-10 text-destructive" />
             </div>
-            <h2 className="text-2xl font-bold">{errorInfo.message}</h2>
+            <h2 className="text-2xl font-bold text-center">{errorInfo.message}</h2>
           </div>
           <div className="space-y-3 bg-white/5 p-6 rounded-2xl border border-white/5">
             <h3 className="font-bold flex items-center gap-2 text-primary text-sm">

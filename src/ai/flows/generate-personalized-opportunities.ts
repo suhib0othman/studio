@@ -54,7 +54,7 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   model: geminiModel,
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
-  prompt: `أنت خبير استراتيجي في الأعمال والذكاء الاصطناعي. حلل البيانات التالية وقدم تقريراً استشارياً كاملاً باللغة العربية:
+  prompt: `أنت خبير استراتيجي في الأعمال والذكاء الاصطناعي. حلل البيانات التالية وقدم تقريراً استشارياً كاملاً باللغة العربية بأسلوب احترافي وملهم:
   
 مجال الخبرة: {{{primaryExpertise}}}
 الوقت المتاح: {{{availableHoursPerWeek}}}
@@ -72,22 +72,30 @@ export async function generatePersonalizedOpportunities(
   input: GeneratePersonalizedOpportunitiesInput
 ): Promise<GeneratePersonalizedOpportunitiesOutput> {
   try {
-    const { output } = await generateOpportunitiesPrompt(input);
+    const { output, response } = await generateOpportunitiesPrompt(input);
+    
     if (!output) {
-      throw new Error("AI engine returned an empty result.");
+      // Check if safety filters blocked the response
+      const isBlocked = response?.candidates?.[0]?.finishReason === 'SAFETY';
+      if (isBlocked) {
+        throw new Error("نعتذر، تم حجب الاستجابة بواسطة فلاتر الأمان. يرجى تعديل مدخلاتك والمحاولة مرة أخرى.");
+      }
+      throw new Error("فشل محرك الذكاء الاصطناعي في إنتاج بيانات صالحة.");
     }
+    
     return output;
   } catch (error: any) {
-    console.error("❌ [AI Flow Error]:", error);
+    console.error("❌ [AI Flow Internal Error]:", error);
     
-    if (error.message?.includes('403')) {
-      throw new Error("Gemini API 403: خطأ في الصلاحيات. تأكد من تفعيل 'Generative Language API' و 'Identity Toolkit API' للمفتاح المستخدم.");
+    // Transparent error propagation
+    if (error.message?.includes('401') || error.message?.includes('403')) {
+      throw new Error("خطأ في صلاحيات Gemini: يرجى التحقق من صحة مفتاح API وتفعيل الخدمات المطلوبة.");
     }
     
-    if (error.message?.includes('404')) {
-      throw new Error("Gemini API 404: الموديل غير موجود. تم تحديث الإعدادات، يرجى إعادة تشغيل الخادم (npm run dev).");
+    if (error.message?.includes('429')) {
+      throw new Error("لقد تجاوزت حد الاستخدام المسموح به لـ Gemini. يرجى الانتظار دقيقة واحدة.");
     }
 
-    throw new Error(error.message || "فشل توليد خارطة الطريق الاستشارية المخصصة.");
+    throw new Error(error.message || "حدث خطأ غير متوقع أثناء تحليل بياناتك.");
   }
 }
