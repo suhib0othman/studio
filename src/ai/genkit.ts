@@ -10,7 +10,6 @@ const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 /**
  * Global AI instance configured with Google AI plugin.
- * Handles missing API keys gracefully without crashing the server process.
  */
 export const ai = genkit({
   plugins: [
@@ -22,7 +21,7 @@ export const ai = genkit({
 
 /**
  * Model reference for Google AI.
- * Updated to a highly stable production identifier.
+ * Using Gemini 2.0 Flash for stability and performance.
  */
 export const geminiModel = 'googleai/gemini-2.0-flash';
 
@@ -30,6 +29,6 @@ if (typeof window === 'undefined') {
   if (!apiKey) {
     console.warn("⚠️ [Genkit Warning]: GEMINI_API_KEY is missing. AI features will fail at runtime.");
   } else {
-    console.log("🤖 [Genkit Engine] Initialized securely.");
+    console.log("🤖 [Genkit Engine] Initialized securely with Gemini 2.0.");
   }
 }

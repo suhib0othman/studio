@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
- * Includes improved validation handling to prevent 500 Internal Server Errors.
+ * Handles Gemini errors, retries with exponential backoff, and provides Arabic feedback.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -45,7 +45,6 @@ const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
   growthPotential: z.string(),
   bestBusinessModel: z.string(),
   bestMonetizationMethod: z.string(),
-  // Use min(1) instead of exact length to prevent validation crashes if AI returns 4 or 6 items
   opportunities: z.array(OpportunitySchema).min(1),
 });
 
@@ -58,17 +57,17 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
   config: {
-    temperature: 0.1,
-    topP: 0.8,
+    temperature: 0.2,
+    topP: 0.9,
   },
-  system: `أنت خبير استراتيجي في الأعمال والذكاء الاصطناعي.
-مهمتك الأساسية هي توليد تقرير JSON متوافق تماماً مع الهيكل المطلوب.
+  system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي.
+مهمتك هي تحليل مدخلات المستخدم وتوليد تقرير "خارطة طريق" بصيغة JSON فقط.
 
-تعليمات تقنية حاسمة:
-1. يجب أن يكون الرد بصيغة JSON خام فقط.
-2. لا تضف أي نصوص مقدمة أو خاتمة أو علامات Markdown.
+قواعد الإنتاج الصارمة:
+1. يجب أن يكون الرد JSON صالحاً تماماً (Strict JSON).
+2. لا تستخدم Markdown (لا تضع \`\`\`json).
 3. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
-4. تأكد من تقديم 5 فرص متنوعة بدقة وتفصيل.`,
+4. املأ جميع الحقول المطلوبة في المخطط (Schema)؛ لا تترك حقولاً فارغة أو غير موجودة.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
 خبرة المستخدم: {{{primaryExpertise}}}
 الوقت المتاح: {{{availableHoursPerWeek}}}
@@ -82,43 +81,60 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 الهدف الأساسي: {{{primaryGoal}}}`,
 });
 
+/**
+ * Helper to map Gemini errors to Arabic user-friendly messages.
+ */
+function handleGeminiError(error: any): string {
+  // If it's a validation error from Genkit/Zod
+  if (error.name === 'ZodError' || error.message?.includes('validation')) {
+    console.error("Schema Validation Failed:", JSON.stringify(error, null, 2));
+    return "حدث خطأ في معالجة البيانات من قبل الذكاء الاصطناعي. يرجى المحاولة مرة أخرى بصياغة مختلفة قليلاً.";
+  }
+
+  const status = error.status || error.code || (error.details && error.details.status);
+  const msg = error.message || "";
+
+  if (status === 429 || msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به (Rate Limit). يرجى الانتظار دقيقة والمحاولة مجدداً.";
+  if (status === 404 || msg.includes('404')) return "نموذج الذكاء الاصطناعي غير متوفر حالياً في منطقتك.";
+  if (status === 500 || status === 503) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً. حاول مجدداً بعد قليل.";
+  if (msg.includes('blocked') || error.finishReason === 'blocked') return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
+  
+  return "حدث خطأ غير متوقع أثناء توليد التقرير. يرجى المحاولة مرة أخرى.";
+}
+
 export async function generatePersonalizedOpportunities(
   input: GeneratePersonalizedOpportunitiesInput
 ): Promise<GeneratePersonalizedOpportunitiesOutput> {
   const maxRetries = 2;
-  let lastError: any;
-
+  
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const result = await generateOpportunitiesPrompt(input);
       
+      if (result.finishReason === 'blocked') {
+        throw new Error("blocked");
+      }
+
       if (!result.output) {
-        if (result.finishReason === 'SAFETY') {
-          throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل بعض الكلمات في مدخلاتك.");
-        }
-        throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج بالهيكل المطلوب.");
+        throw new Error("EMPTY_OUTPUT");
       }
       
       return result.output;
     } catch (error: any) {
-      lastError = error;
-      console.error(`--- [AI ERROR DEBUG] (Attempt ${attempt + 1}) ---`, error.message);
+      console.error(`--- [AI ATTEMPT ${attempt + 1}] ---`, error.message);
       
-      const isRateLimit = error.message?.includes('429') || (error.status === 429);
+      const isRetryable = error.message?.includes('429') || error.status === 429 || error.message === 'EMPTY_OUTPUT';
       
-      if (isRateLimit && attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 2000;
+      if (isRetryable && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1500;
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
 
-      // If it's a validation error (Zod), we don't retry, just throw a cleaner message
-      if (error.name === 'ZodError' || error.message?.includes('validation')) {
-        throw new Error("حدث خطأ في معالجة البيانات من قبل الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.");
-      }
-
-      throw error;
+      // Instead of throwing a raw object (which Next.js might fail to serialize, causing 500), 
+      // we throw a standard Error with a string message.
+      throw new Error(handleGeminiError(error));
     }
   }
-  throw lastError;
+  throw new Error("فشلت جميع المحاولات لتوليد التقرير. يرجى التحقق من اتصالك.");
 }

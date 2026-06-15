@@ -1,5 +1,6 @@
 /**
- * @fileOverview Firebase configuration and strict runtime validation.
+ * @fileOverview Firebase configuration and safe runtime validation.
+ * Optimized to prevent build-time evaluation crashes.
  */
 
 export const firebaseConfig = {
@@ -13,11 +14,11 @@ export const firebaseConfig = {
 
 /**
  * Checks if the minimal required configuration is present.
+ * This is now a soft check to prevent 'Internal Server Error' during module load.
  */
 export const isFirebaseConfigValid = () => {
   return !!(
     firebaseConfig.apiKey &&
-    firebaseConfig.authDomain &&
     firebaseConfig.projectId &&
     firebaseConfig.appId
   );

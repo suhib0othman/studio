@@ -135,16 +135,18 @@ export default function AssessmentPage() {
       console.error("Submission Error Details:", err);
       setIsProcessing(false);
       
-      // Extract the real error message sent by the Server Action
-      const errorMessage = typeof err === 'string' ? err : err.message || "حدث خطأ غير متوقع أثناء توليد التقرير.";
+      // Better error message extraction from Server Action failures
+      const rawMessage = err instanceof Error ? err.message : String(err);
       
       setErrorInfo({
-        message: errorMessage,
+        message: rawMessage.includes("Internal Server Error") 
+          ? "حدث خطأ غير متوقع في الخادم أثناء تحليل بياناتك."
+          : rawMessage,
         steps: [
           "تحقق من استقرار اتصال الإنترنت لديك.",
-          "تأكد من عدم وجود حجب لخدمات Google API في منطقتك.",
+          "تأكد من إكمال جميع الأسئلة بشكل منطقي.",
           "أعد المحاولة بعد دقيقة واحدة لتجنب ضغط الخادم.",
-          "إذا تكرر الخطأ، جرب صياغة خبراتك بشكل مختلف لتجنب فلاتر الأمان."
+          "إذا استمرت المشكلة، جرب استخدام متصفح آخر أو نافذة تخفي."
         ]
       });
     }
