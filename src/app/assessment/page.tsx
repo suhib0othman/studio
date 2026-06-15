@@ -34,6 +34,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFriendlyAuthErrorMessage, type FriendlyError } from "@/firebase/auth-errors";
 
+// Set max duration for Server Actions on this page
+export const maxDuration = 60;
+
 const QUESTIONS = [
   { 
     id: "primaryExpertise", 
@@ -132,21 +135,20 @@ export default function AssessmentPage() {
       localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
       router.push("/dashboard");
     } catch (err: any) {
-      console.error("Submission Error Details:", err);
+      console.error("Submission Error:", err);
       setIsProcessing(false);
       
-      // Better error message extraction from Server Action failures
       const rawMessage = err instanceof Error ? err.message : String(err);
       
       setErrorInfo({
-        message: rawMessage.includes("Internal Server Error") 
-          ? "حدث خطأ غير متوقع في الخادم أثناء تحليل بياناتك."
+        message: rawMessage.includes("Internal Server Error") || rawMessage.includes("500")
+          ? "حدث خطأ في الخادم أثناء تحليل بياناتك. غالباً ما يكون ذلك بسبب ضغط الطلبات."
           : rawMessage,
         steps: [
-          "تحقق من استقرار اتصال الإنترنت لديك.",
-          "تأكد من إكمال جميع الأسئلة بشكل منطقي.",
+          "تأكد من استقرار اتصال الإنترنت لديك.",
           "أعد المحاولة بعد دقيقة واحدة لتجنب ضغط الخادم.",
-          "إذا استمرت المشكلة، جرب استخدام متصفح آخر أو نافذة تخفي."
+          "إذا استمرت المشكلة، جرب تسجيل الدخول قبل البدء بالتقييم.",
+          "تأكد من اختيار إجابات منطقية وواضحة."
         ]
       });
     }

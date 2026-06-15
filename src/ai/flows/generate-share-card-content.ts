@@ -17,7 +17,7 @@ export type GenerateShareCardContentInput = z.infer<typeof GenerateShareCardCont
 const GenerateShareCardContentOutputSchema = z.object({
   aiWealthScore: z.number().int().min(0).max(100),
   topOpportunityName: z.string(),
-  topThreeOpportunityNames: z.array(z.string()).length(3),
+  topThreeOpportunityNames: z.array(z.string()).min(1).max(5),
   achievementBadge: z.string(),
   personalizedMessage: z.string(),
 });
@@ -29,8 +29,9 @@ const generateShareCardContentPrompt = ai.definePrompt({
   input: { schema: GenerateShareCardContentInputSchema },
   output: { schema: GenerateShareCardContentOutputSchema },
   config: { temperature: 0.4 },
-  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". مهمتك تحويل بيانات نجاح المستخدم إلى محتوى بطاقة مشاركة ملهمة.
-أجب بصيغة JSON فقط.`,
+  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". مهمتك تحويل بيانات نجاح المستخدم إلى محتوى بطاقة مشاركة ملهمة ومختصرة.
+أجب بصيغة JSON فقط، دون استخدام Markdown أو علامات \`\`\`json.
+يجب أن تحتوي مصفوفة "topThreeOpportunityNames" على 3 عناصر على الأقل.`,
   prompt: `قم بتحويل بيانات المستخدم التالية إلى محتوى بطاقة مشاركة ملهم:
 مؤشر الثراء: {{{aiWealthScore}}}
 الملخص: {{{profileSummary}}}
@@ -62,8 +63,9 @@ export async function generateShareCardContent(
     } catch (error: any) {
       console.error(`--- [SHARE CARD ATTEMPT ${attempt + 1}] ---`, error?.message);
       
-      if ((error?.status === 429 || error?.message?.includes('429')) && attempt < maxRetries) {
-        await new Promise(res => setTimeout(res, Math.pow(2, attempt) * 1000));
+      const isRetryable = error?.status === 429 || error?.message?.includes('429') || error?.name === 'ZodError';
+      if (isRetryable && attempt < maxRetries) {
+        await new Promise(res => setTimeout(res, Math.pow(2, attempt) * 1500));
         continue;
       }
       throw new Error("فشل توليد محتوى بطاقة المشاركة. يرجى المحاولة لاحقاً.");

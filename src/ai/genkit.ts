@@ -6,7 +6,13 @@
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+/**
+ * Robust API key detection checking multiple common naming conventions.
+ */
+const apiKey = 
+  process.env.GEMINI_API_KEY || 
+  process.env.GOOGLE_API_KEY || 
+  process.env.GOOGLE_GENAI_API_KEY;
 
 /**
  * Global AI instance configured with Google AI plugin.

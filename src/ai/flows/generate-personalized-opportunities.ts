@@ -45,7 +45,7 @@ const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
   growthPotential: z.string(),
   bestBusinessModel: z.string(),
   bestMonetizationMethod: z.string(),
-  opportunities: z.array(OpportunitySchema).min(1),
+  opportunities: z.array(OpportunitySchema).min(1).max(10),
 });
 
 export type GeneratePersonalizedOpportunitiesInput = z.infer<typeof GeneratePersonalizedOpportunitiesInputSchema>;
@@ -65,9 +65,9 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 
 قواعد الإنتاج الصارمة:
 1. يجب أن يكون الرد JSON صالحاً تماماً (Strict JSON).
-2. لا تستخدم Markdown (لا تضع \`\`\`json).
+2. لا تستخدم Markdown (لا تضع \`\`\`json في البداية أو النهاية).
 3. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
-4. املأ جميع الحقول المطلوبة في المخطط (Schema)؛ لا تترك حقولاً فارغة أو غير موجودة.`,
+4. املأ جميع الحقول المطلوبة في المخطط (Schema)؛ لا تترك حقولاً فارغة.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
 خبرة المستخدم: {{{primaryExpertise}}}
 الوقت المتاح: {{{availableHoursPerWeek}}}
@@ -81,23 +81,18 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 الهدف الأساسي: {{{primaryGoal}}}`,
 });
 
-/**
- * Helper to map Gemini errors to Arabic user-friendly messages.
- */
 function handleGeminiError(error: any): string {
-  const msg = error?.message || "";
+  const msg = String(error?.message || "");
   const status = error?.status || error?.code;
   
-  // Safe check for safety blocks
-  if (msg.includes('blocked') || (error && typeof error === 'object' && error.finishReason === 'blocked')) {
+  if (msg.includes('blocked') || msg.includes('SAFETY') || error?.finishReason === 'blocked') {
     return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
   }
 
-  if (status === 429 || msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به (Rate Limit). يرجى الانتظار دقيقة والمحاولة مجدداً.";
-  if (status === 404 || msg.includes('404')) return "نموذج الذكاء الاصطناعي غير متوفر حالياً في منطقتك.";
-  if (status === 500 || status === 503) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً. حاول مجدداً بعد قليل.";
+  if (status === 429 || msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به. يرجى الانتظار دقيقة والمحاولة مجدداً.";
+  if (status === 500 || status === 503 || msg.includes('503')) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً. حاول مجدداً بعد قليل.";
   
-  return "حدث خطأ غير متوقع أثناء توليد التقرير. يرجى المحاولة مرة أخرى.";
+  return "حدث خطأ غير متوقع أثناء تحليل البيانات. يرجى المحاولة مرة أخرى.";
 }
 
 export async function generatePersonalizedOpportunities(
@@ -109,7 +104,6 @@ export async function generatePersonalizedOpportunities(
     try {
       const result = await generateOpportunitiesPrompt(input);
       
-      // Genkit 1.x uses finishReason directly on the result
       if (result.finishReason === 'blocked') {
         throw new Error("blocked");
       }
@@ -122,18 +116,19 @@ export async function generatePersonalizedOpportunities(
     } catch (error: any) {
       console.error(`--- [AI ATTEMPT ${attempt + 1}] ---`, error?.message);
       
-      // Handle retryable errors (Rate limits or transient empty outputs)
-      const isRetryable = error?.message?.includes('429') || error?.status === 429 || error?.message === 'EMPTY_OUTPUT';
+      const isRetryable = 
+        error?.message?.includes('429') || 
+        error?.status === 429 || 
+        error?.message === 'EMPTY_OUTPUT' ||
+        error?.name === 'ZodError'; // Retry if AI format was slightly off
       
       if (isRetryable && attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 1500;
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
         continue;
       }
 
-      // Convert technical error to user-friendly Arabic message
       throw new Error(handleGeminiError(error));
     }
   }
-  throw new Error("فشلت جميع المحاولات لتوليد التقرير. يرجى التحقق من اتصالك.");
+  throw new Error("فشلت جميع المحاولات لتوليد التقرير. يرجى المحاولة لاحقاً.");
 }
