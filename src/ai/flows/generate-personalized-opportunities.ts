@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview This file implements a hardened Genkit flow to generate personalized online income opportunities.
- * Hardened with strict system instructions and transparent error handling.
+ * Hardened with strict system instructions for schema compliance and transparent error handling.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -56,17 +56,19 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
   config: {
-    temperature: 0.4, // Reduced for higher schema compliance
-    topP: 0.9,
+    temperature: 0.2, // Lower temperature for stricter schema compliance
+    topP: 0.8,
   },
   system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي.
 مهمتك: توليد تقرير استشاري دقيق بصيغة JSON فقط.
-القواعد الصارمة:
-1. الالتزام التام بـ JSON Schema المعرف.
-2. لا تضف أي نص توضيحي قبل أو بعد الـ JSON.
-3. لا تستخدم علامات الـ Markdown (مثل \`\`\`json).
-4. جميع النصوص يجب أن تكون باللغة العربية الاحترافية.
-5. تأكد من تقديم 5 فرص متنوعة تماماً تعتمد على الذكاء الاصطناعي.`,
+
+قواعد صارمة جداً للالتزام بالهيكل (Schema Compliance):
+1. الالتزام التام بـ JSON Schema المعرف. لا تحيد عنه أبداً.
+2. لا تضف أي نص توضيحي، ترحيب، أو علامات Markdown مثل \`\`\`json.
+3. الإجابة يجب أن تبدأ بـ { وتنتهي بـ }.
+4. جميع النصوص يجب أن تكون باللغة العربية الاحترافية الراقية.
+5. تأكد من تقديم 5 فرص متنوعة تماماً تعتمد على قوة الذكاء الاصطناعي الحالية.
+6. إذا تعذر إنتاج JSON صالح، لا تحاول تخمين النتيجة بل اتبع القواعد.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً باللغة العربية:
   
 مجال الخبرة: {{{primaryExpertise}}}
@@ -90,9 +92,12 @@ export async function generatePersonalizedOpportunities(
     if (!output) {
       const finishReason = response?.candidates?.[0]?.finishReason;
       if (finishReason === 'SAFETY') {
-        throw new Error("نعتذر، تم حجب الاستجابة بواسطة فلاتر الأمان (Safety Filters). يرجى محاولة صياغة مهاراتك بشكل مختلف.");
+        throw new Error("نعتذر، تم حجب الاستجابة بواسطة فلاتر الأمان الخاصة بـ Gemini. يرجى تجنب استخدام كلمات قد تعتبر حساسة ومحاولة إعادة الصياغة.");
       }
-      throw new Error("فشل محرك الذكاء الاصطناعي في تنسيق النتائج بشكل صحيح. يرجى المحاولة مرة أخرى.");
+      if (finishReason === 'MAX_TOKENS') {
+        throw new Error("الاستجابة كانت طويلة جداً وتم قطعها. يرجى المحاولة مرة أخرى.");
+      }
+      throw new Error("فشل محرك الذكاء الاصطناعي في تنسيق النتائج بشكل صحيح (JSON Parsing Error). يرجى المحاولة مرة أخرى.");
     }
     
     return output;
@@ -101,12 +106,15 @@ export async function generatePersonalizedOpportunities(
     
     const errMsg = error.message || "";
     if (errMsg.includes('429')) {
-      throw new Error("لقد تجاوزت حد الاستخدام المتاح (Rate Limit). يرجى الانتظار دقيقة واحدة.");
+      throw new Error("لقد تجاوزت حد الاستخدام المتاح (Rate Limit). يرجى الانتظار دقيقة واحدة قبل إعادة المحاولة.");
     }
     if (errMsg.includes('quota')) {
-      throw new Error("تم استهلاك حصة الاستخدام اليومية. يرجى المحاولة لاحقاً.");
+      throw new Error("تم استهلاك حصة الاستخدام اليومية المخصصة. يرجى المحاولة في وقت لاحق.");
+    }
+    if (errMsg.includes('401') || errMsg.includes('403')) {
+      throw new Error("خطأ في صلاحيات المفتاح (API Key Error). يرجى التحقق من إعدادات الخادم.");
     }
 
-    throw new Error(error.message || "حدث خطأ فني أثناء تحليل بياناتك. يرجى التأكد من اتصالك.");
+    throw new Error(error.message || "حدث خطأ فني غير متوقع أثناء تحليل بياناتك. يرجى التأكد من اتصالك بالإنترنت.");
   }
 }

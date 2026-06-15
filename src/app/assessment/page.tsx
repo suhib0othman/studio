@@ -132,19 +132,19 @@ export default function AssessmentPage() {
       localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
       router.push("/dashboard");
     } catch (err: any) {
-      console.error("Submission Error:", err);
+      console.error("Submission Error Details:", err);
       setIsProcessing(false);
       
-      // Transparent error for debugging
-      const errorMessage = typeof err === 'string' ? err : err.message || "حدث خطأ غير متوقع.";
+      // Extract the real error message sent by the Server Action
+      const errorMessage = typeof err === 'string' ? err : err.message || "حدث خطأ غير متوقع أثناء توليد التقرير.";
       
       setErrorInfo({
         message: errorMessage,
         steps: [
-          "تحقق من اتصال الإنترنت الخاص بك.",
-          "تأكد من عدم حجب Gemini API في بلدك.",
-          "أعد المحاولة بعد قليل؛ قد يكون الضغط مرتفعاً على الخادم.",
-          "إذا استمرت المشكلة، يرجى التواصل مع الدعم الفني."
+          "تحقق من استقرار اتصال الإنترنت لديك.",
+          "تأكد من عدم وجود حجب لخدمات Google API في منطقتك.",
+          "أعد المحاولة بعد دقيقة واحدة لتجنب ضغط الخادم.",
+          "إذا تكرر الخطأ، جرب صياغة خبراتك بشكل مختلف لتجنب فلاتر الأمان."
         ]
       });
     }

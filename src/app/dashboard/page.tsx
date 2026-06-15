@@ -49,6 +49,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsMounted(true);
+    // Defer localStorage access to useEffect to prevent hydration mismatch
     const saved = localStorage.getItem("ai_assist_pro_result");
     if (saved) {
       try {
@@ -56,10 +57,15 @@ export default function DashboardPage() {
       } catch (e) {
         console.error("Failed to parse local results");
       }
-    } else if (!authLoading && !user) {
+    }
+  }, []);
+
+  useEffect(() => {
+    // Auth-based redirection after mount and data check
+    if (isMounted && !authLoading && !user && !localData && !firestoreData && !firestoreLoading) {
       router.push("/assessment");
     }
-  }, [router, authLoading, user]);
+  }, [isMounted, authLoading, user, localData, firestoreData, firestoreLoading, router]);
 
   const data = firestoreData || localData;
 
@@ -75,8 +81,14 @@ export default function DashboardPage() {
     }
   };
 
-  // Prevent hydration error
-  if (!isMounted) return null;
+  // Prevent hydration error by not rendering until mounted
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background" dir="rtl">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   if (authLoading || (user && firestoreLoading)) {
     return (
