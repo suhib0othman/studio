@@ -56,18 +56,17 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
   config: {
-    temperature: 0.1, // Low temperature for maximum schema compliance
+    temperature: 0.1,
     topP: 0.8,
   },
   system: `أنت خبير استراتيجي في الأعمال والذكاء الاصطناعي.
 مهمتك الأساسية هي توليد تقرير JSON متوافق تماماً مع الهيكل المطلوب.
 
-قواعد صارمة لضمان النجاح التقني:
-1. الرد يجب أن يكون JSON صالح (Pure JSON) فقط.
-2. لا تضف أي نص توضيحي قبل أو بعد الـ JSON.
-3. لا تستخدم علامات Markdown (مثل \`\`\`json). ابدأ بـ { وانتهِ بـ }.
-4. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
-5. تأكد من تقديم 5 فرص متنوعة بدقة وتفصيل.`,
+تعليمات تقنية حاسمة:
+1. يجب أن يكون الرد بصيغة JSON خام فقط.
+2. لا تضف أي نصوص مقدمة أو خاتمة أو علامات Markdown (مثل \`\`\`json).
+3. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
+4. تأكد من تقديم 5 فرص متنوعة بدقة وتفصيل.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
 خبرة المستخدم: {{{primaryExpertise}}}
 الوقت المتاح: {{{availableHoursPerWeek}}}
@@ -97,15 +96,14 @@ export async function generatePersonalizedOpportunities(
   } catch (error: any) {
     console.error("AI Flow Error:", error);
     
-    // Transparent error propagation for better UX and debugging
+    if (error.message?.includes('404')) {
+      throw new Error("حدث خطأ في الاتصال بنموذج الذكاء الاصطناعي (Model Not Found). يرجى التحقق من إعدادات المفتاح.");
+    }
+    
     if (error.message?.includes('429')) {
       throw new Error("تم تجاوز حد الطلبات المسموح به. يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");
     }
-    
-    if (error.message?.includes('401') || error.message?.includes('403')) {
-      throw new Error("خطأ في صلاحيات الوصول لمحرك الذكاء الاصطناعي. يرجى مراجعة إعدادات الخادم.");
-    }
 
-    throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير. يرجى التأكد من اتصالك بالإنترنت.");
+    throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير.");
   }
 }

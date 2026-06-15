@@ -19,11 +19,11 @@ export const ai = genkit({
 });
 
 /**
- * Model reference using string ID for maximum compatibility with Genkit 1.x.
- * Using Gemini 1.5 Flash for optimal performance and schema reliability.
+ * Model reference for Google AI.
+ * The identifier 'googleai/gemini-1.5-flash' is the standard for Genkit 1.x Google AI plugin.
  */
 export const geminiModel = 'googleai/gemini-1.5-flash';
 
 if (typeof window === 'undefined') {
-  console.log("🤖 [Genkit Engine] Initialized securely via Environment Variables.");
+  console.log("🤖 [Genkit Engine] Initialized securely with Google AI plugin.");
 }
