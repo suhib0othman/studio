@@ -132,14 +132,19 @@ export default function AssessmentPage() {
       localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
       router.push("/dashboard");
     } catch (err: any) {
-      console.error("Submission Error:", err);
+      console.error("Submission Error Debug:", err);
       setIsProcessing(false);
+      
+      // Extract original message from error or nested objects
+      const errorMessage = typeof err === 'string' ? err : err.message || "فشل توليد التقرير بسبب مشكلة في الاتصال بمحرك الذكاء الاصطناعي.";
+      
       setErrorInfo({
-        message: err.message || "حدث خطأ غير متوقع في توليد التقرير الاستشاري",
+        message: errorMessage,
         steps: [
-          "تأكد من استقرار اتصالك بالإنترنت.",
-          "تحقق من صحة مفاتيح API الخاصة بالذكاء الاصطناعي في الإعدادات.",
-          "إذا تكرر الخطأ، جرب المحاولة بعد دقيقة واحدة لتجاوز حدود الاستخدام."
+          "تأكد من تفعيل GEMINI_API_KEY في إعدادات البيئة (Settings).",
+          "تحقق من أن استهلاك Gemini لم يتجاوز الحدود المجانية اليومية.",
+          "جرب إعادة تحميل الصفحة والمحاولة مرة أخرى ببيانات مختلفة قليلاً.",
+          "تأكد من استقرار اتصال الإنترنت الخاص بك."
         ]
       });
     }
@@ -192,7 +197,7 @@ export default function AssessmentPage() {
             <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20">
                <AlertCircle className="w-10 h-10 text-destructive" />
             </div>
-            <h2 className="text-2xl font-bold text-center">{errorInfo.message}</h2>
+            <h2 className="text-xl font-bold text-center leading-relaxed">{errorInfo.message}</h2>
           </div>
           <div className="space-y-3 bg-white/5 p-6 rounded-2xl border border-white/5">
             <h3 className="font-bold flex items-center gap-2 text-primary text-sm">

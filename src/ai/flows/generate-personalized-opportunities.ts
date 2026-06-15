@@ -54,7 +54,15 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   model: geminiModel,
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
-  prompt: `أنت خبير استراتيجي في الأعمال والذكاء الاصطناعي. حلل البيانات التالية وقدم تقريراً استشارياً كاملاً باللغة العربية بأسلوب احترافي وملهم:
+  config: {
+    temperature: 0.7,
+    topP: 0.95,
+  },
+  system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي. 
+يجب أن تلتزم تماماً بالهيكل المطلوب (JSON Schema). 
+يجب أن تكون جميع النصوص العربية احترافية، ملهمة، ودقيقة تقنياً.
+تأكد من تقديم 5 فرص متنوعة ومبتكرة تعتمد على الذكاء الاصطناعي.`,
+  prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً باللغة العربية:
   
 مجال الخبرة: {{{primaryExpertise}}}
 الوقت المتاح: {{{availableHoursPerWeek}}}
@@ -75,27 +83,37 @@ export async function generatePersonalizedOpportunities(
     const { output, response } = await generateOpportunitiesPrompt(input);
     
     if (!output) {
-      // Check if safety filters blocked the response
-      const isBlocked = response?.candidates?.[0]?.finishReason === 'SAFETY';
-      if (isBlocked) {
-        throw new Error("نعتذر، تم حجب الاستجابة بواسطة فلاتر الأمان. يرجى تعديل مدخلاتك والمحاولة مرة أخرى.");
+      const finishReason = response?.candidates?.[0]?.finishReason;
+      if (finishReason === 'SAFETY') {
+        throw new Error("نعتذر، تم حجب الاستجابة بواسطة فلاتر الأمان (Safety Filters). يرجى محاولة صياغة مهاراتك بشكل مختلف.");
       }
-      throw new Error("فشل محرك الذكاء الاصطناعي في إنتاج بيانات صالحة.");
+      if (finishReason === 'RECITATION') {
+        throw new Error("حدث خطأ في حقوق الملكية الفكرية أثناء توليد النتائج. يرجى المحاولة مرة أخرى.");
+      }
+      
+      console.error("❌ [AI Flow Error]: Output is null. Response candidate:", response?.candidates?.[0]);
+      throw new Error("فشل محرك الذكاء الاصطناعي في تنسيق النتائج بشكل صحيح. يرجى المحاولة مرة أخرى.");
     }
     
     return output;
   } catch (error: any) {
-    console.error("❌ [AI Flow Internal Error]:", error);
+    console.error("❌ [AI Flow Internal Exception]:", error);
     
-    // Transparent error propagation
-    if (error.message?.includes('401') || error.message?.includes('403')) {
-      throw new Error("خطأ في صلاحيات Gemini: يرجى التحقق من صحة مفتاح API وتفعيل الخدمات المطلوبة.");
+    // Transparent error propagation for common API issues
+    const errMsg = error.message || "";
+    
+    if (errMsg.includes('401') || errMsg.includes('403')) {
+      throw new Error("خطأ في صلاحيات Gemini: يرجى التحقق من مفتاح API في إعدادات البيئة.");
     }
     
-    if (error.message?.includes('429')) {
-      throw new Error("لقد تجاوزت حد الاستخدام المسموح به لـ Gemini. يرجى الانتظار دقيقة واحدة.");
+    if (errMsg.includes('429')) {
+      throw new Error("لقد تجاوزت حد الاستخدام (Rate Limit). يرجى الانتظار لمدة دقيقة واحدة.");
     }
 
-    throw new Error(error.message || "حدث خطأ غير متوقع أثناء تحليل بياناتك.");
+    if (errMsg.includes('quota')) {
+      throw new Error("تم استهلاك حصة الاستخدام المتاحة لـ Gemini. يرجى المحاولة لاحقاً.");
+    }
+
+    throw new Error(error.message || "حدث خطأ فني أثناء تحليل بياناتك. يرجى التأكد من اتصالك.");
   }
 }
