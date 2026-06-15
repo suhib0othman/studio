@@ -1,13 +1,13 @@
 'use server';
 /**
- * @fileOverview Refactored share card flow with improved type safety and retry logic.
+ * @fileOverview Refactored share card flow with Genkit 1.x API compatibility.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const GenerateShareCardContentInputSchema = z.object({
-  aiWealthScore: z.number().int().min(0).max(100),
+  aiWealthScore: z.number().min(0).max(100),
   profileSummary: z.string(),
   achievementBadge: z.string(),
   topOpportunities: z.array(z.string()).min(1),
@@ -15,7 +15,7 @@ const GenerateShareCardContentInputSchema = z.object({
 export type GenerateShareCardContentInput = z.infer<typeof GenerateShareCardContentInputSchema>;
 
 const GenerateShareCardContentOutputSchema = z.object({
-  aiWealthScore: z.number().int().min(0).max(100),
+  aiWealthScore: z.number().min(0).max(100),
   topOpportunityName: z.string(),
   topThreeOpportunityNames: z.array(z.string()).min(1).max(5),
   achievementBadge: z.string(),
@@ -51,7 +51,8 @@ export async function generateShareCardContent(
     try {
       const result = await generateShareCardContentPrompt(input);
       
-      if ((result.finishReason as string) === 'blocked') {
+      const finishReason = result.finishReason as string;
+      if (finishReason === 'blocked' || finishReason === 'other') {
         throw new Error("blocked");
       }
 

@@ -22,7 +22,7 @@ const GeneratePersonalizedOpportunitiesInputSchema = z.object({
 
 const OpportunitySchema = z.object({
   name: z.string().describe('Opportunity name in Arabic'),
-  compatibilityScore: z.number().int().min(0).max(100),
+  compatibilityScore: z.number().min(0).max(100),
   monthlyIncomePotential: z.string(),
   difficultyLevel: z.string(),
   startupCost: z.string(),
@@ -38,7 +38,7 @@ const OpportunitySchema = z.object({
 });
 
 const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
-  aiWealthScore: z.number().int().min(0).max(100),
+  aiWealthScore: z.number().min(0).max(100),
   achievementBadge: z.string(),
   profileSummary: z.string(),
   personalityType: z.string(),
@@ -85,7 +85,7 @@ function handleGeminiError(error: any): string {
   const msg = String(error?.message || "");
   const status = error?.status || error?.code;
   
-  if (msg.includes('blocked') || msg.includes('SAFETY') || (error?.finishReason as string) === 'blocked') {
+  if (msg.includes('blocked') || msg.includes('SAFETY') || msg.includes('candidate')) {
     return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
   }
 
@@ -104,8 +104,9 @@ export async function generatePersonalizedOpportunities(
     try {
       const result = await generateOpportunitiesPrompt(input);
       
-      // Type-safe check for finishReason
-      if ((result.finishReason as string) === 'blocked') {
+      // Genkit 1.x: check finishReason on result
+      const finishReason = result.finishReason as string;
+      if (finishReason === 'blocked' || finishReason === 'other') {
         throw new Error("blocked");
       }
 
@@ -124,7 +125,7 @@ export async function generatePersonalizedOpportunities(
         error?.name === 'ZodError';
       
       if (isRetryable && attempt < maxRetries) {
-        // Exponential backoff: 1s, 2s, 4s
+        // Exponential backoff
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         continue;
       }
