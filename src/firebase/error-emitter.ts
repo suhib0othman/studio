@@ -1,5 +1,6 @@
 /**
  * @fileOverview A browser-compatible EventEmitter implementation to replace Node.js 'events'.
+ * This prevents build errors in Next.js when bundling for the client.
  */
 
 type Listener = (...args: any[]) => void;
