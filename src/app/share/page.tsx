@@ -16,7 +16,6 @@ import {
   Trophy,
   Zap,
   Users,
-  CheckCircle2,
   Loader2,
   Gift,
   RefreshCcw,
@@ -32,6 +31,8 @@ import { useAuth, useFirestore, useDoc, useUser } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+
+export const maxDuration = 60;
 
 export default function SharePage() {
   const router = useRouter();
@@ -68,7 +69,6 @@ export default function SharePage() {
       const result: GeneratePersonalizedOpportunitiesOutput = JSON.parse(rawResult || "{}");
       
       if (result.aiWealthScore !== undefined) {
-        // AI content generation
         const shareData = await generateShareCardContent({
           aiWealthScore: result.aiWealthScore,
           profileSummary: result.profileSummary,
@@ -81,11 +81,8 @@ export default function SharePage() {
       }
     } catch (e: any) {
       console.error("Share Card Initialization Error:", e);
-      // Map cryptic AI errors to friendly Arabic messages
       if (e.message?.includes("quota") || e.message?.includes("429")) {
         setError("نعتذر، لقد وصلنا للحد الأقصى من الطلبات حالياً. يرجى المحاولة مرة أخرى بعد قليل.");
-      } else if (e.message?.includes("404") || e.message?.includes("not found")) {
-        setError("خطأ في الاتصال بمحرك الذكاء الاصطناعي. يرجى التأكد من إعدادات الخادم.");
       } else {
         setError("حدث خطأ أثناء إنشاء بطاقة المشاركة. يرجى التأكد من اتصالك والمحاولة مرة أخرى.");
       }
@@ -190,9 +187,6 @@ export default function SharePage() {
          <AlertCircle className="w-8 h-8 text-destructive" />
        </div>
        <h2 className="text-2xl font-bold mb-4">{error}</h2>
-       <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-         واجهنا تحدياً في التواصل مع الخادم. يرجى التحقق من اتصالك والمحاولة مرة أخرى.
-       </p>
        <div className="flex gap-4">
          <Button onClick={() => initializeShare(true)} className="gap-2">
            <RefreshCcw className="w-4 h-4" /> إعادة المحاولة
@@ -213,7 +207,6 @@ export default function SharePage() {
     <div className="min-h-screen pt-24 pb-12 bg-background" dir="rtl">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         <div className="mb-8">
           <Button variant="ghost" onClick={() => router.push('/dashboard')} className="hover:bg-white/5 text-lg group">
             <ArrowLeft className="w-4 h-4 ml-2 group-hover:-translate-x-1 transition-transform" /> العودة إلى لوحة التحكم
@@ -221,7 +214,6 @@ export default function SharePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          {/* Share Card Preview */}
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-primary via-accent to-secondary rounded-[2rem] blur opacity-30 group-hover:opacity-100 transition duration-1000" />
             <div ref={cardRef} className="relative glass-card aspect-[4/5] flex flex-col justify-between p-10 border-white/20 overflow-hidden rounded-[2rem] bg-[#0a0c1a]">
@@ -250,9 +242,7 @@ export default function SharePage() {
 
                 <div className="space-y-2">
                   <h5 className="text-xs font-medium text-primary uppercase tracking-wider">أفضل تطابق مهني</h5>
-                  <p className="text-3xl font-bold leading-tight">
-                    {data.topOpportunityName}
-                  </p>
+                  <p className="text-3xl font-bold leading-tight">{data.topOpportunityName}</p>
                 </div>
 
                 <div className="pt-4 border-t border-white/10">
@@ -273,7 +263,6 @@ export default function SharePage() {
             </div>
           </div>
 
-          {/* Share Actions */}
           <div className="space-y-10 text-right">
             <div>
               <h1 className="text-4xl font-bold mb-4">شارك نجاحك وانطلق</h1>
@@ -347,22 +336,13 @@ export default function SharePage() {
                    <Button size="icon" className="h-12 w-12 bg-white/5 hover:bg-white/10 border border-white/5 shrink-0" onClick={handleCopyLink}>
                      <Copy className="w-5 h-5" />
                    </Button>
-                   <div className="flex-1 h-12 flex items-center px-4 rounded-xl bg-white/5 border border-white/5 text-sm font-mono overflow-hidden direction-ltr text-left whitespace-nowrap">
+                   <div className="flex-1 h-12 flex items-center px-4 rounded-xl bg-white/5 border border-white/5 text-sm font-mono overflow-hidden text-left whitespace-nowrap">
                      {referralLink || "جاري التحميل..."}
                    </div>
                  </div>
                  {copySuccess && <p className="text-xs text-primary font-bold text-right animate-fade-in">تم نسخ الرابط بنجاح!</p>}
                </div>
             </Card>
-
-            <div className="p-6 rounded-[2rem] bg-primary/5 border border-primary/10 flex items-start gap-4 flex-row-reverse relative overflow-hidden group">
-              <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <Zap className="w-6 h-6 text-primary shrink-0 mt-1 relative z-10" />
-              <div className="text-right relative z-10">
-                <h4 className="font-bold text-lg mb-1">افتح التحليلات المتقدمة</h4>
-                <p className="text-sm text-muted-foreground">قم بدعوة {milestone} أشخاص للحصول على خطة عمل مدتها 30 يوماً كاملة لكل فرصة مهنية.</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

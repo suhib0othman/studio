@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
- * Handles Gemini errors, retries with exponential backoff, and provides Arabic feedback.
+ * Fixed for Genkit 1.x API and TypeScript strict mode.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -64,12 +64,8 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   },
   system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي.
 مهمتك هي تحليل مدخلات المستخدم وتوليد تقرير "خارطة طريق" بصيغة JSON فقط.
-
-قواعد الإنتاج الصارمة:
-1. يجب أن يكون الرد JSON صالحاً تماماً (Strict JSON).
-2. لا تستخدم Markdown (لا تضع \`\`\`json في البداية أو النهاية).
-3. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
-4. املأ جميع الحقول المطلوبة؛ استخدم أرقاماً مجردة للحقول الرقمية.`,
+يجب أن يكون الرد JSON صالحاً تماماً وبدون استخدام Markdown (بدون \`\`\`json).
+استخدم اللغة العربية الاحترافية والملهمة دائماً.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
 خبرة المستخدم: {{{primaryExpertise}}}
 الوقت المتاح: {{{availableHoursPerWeek}}}
@@ -84,48 +80,37 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 });
 
 function handleGeminiError(error: any): string {
-  const msg = String(error?.message || "");
-  console.error("Gemini Error Detail:", error);
-  
-  if (msg.includes('blocked') || msg.includes('SAFETY')) {
-    return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
+  const msg = String(error?.message || "").toUpperCase();
+  if (msg.includes('BLOCKED') || msg.includes('SAFETY')) {
+    return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك.";
   }
-  if (msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به. يرجى الانتظار دقيقة والمحاولة مجدداً.";
-  if (msg.includes('404')) return "خطأ في إعدادات المحرك. يرجى مراجعة مفتاح الربط.";
-  if (msg.includes('500') || msg.includes('503')) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً حالياً.";
-  
-  return "حدث خطأ أثناء معالجة البيانات. يرجى المحاولة مرة أخرى.";
+  if (msg.includes('429')) return "تم تجاوز حد الطلبات. يرجى الانتظار دقيقة.";
+  if (msg.includes('500') || msg.includes('503')) return "خدمة الذكاء الاصطناعي غير متاحة حالياً.";
+  return "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.";
 }
 
 export async function generatePersonalizedOpportunities(
   input: GeneratePersonalizedOpportunitiesInput
 ): Promise<GeneratePersonalizedOpportunitiesOutput> {
   const maxRetries = 3;
-  
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const result = await generateOpportunitiesPrompt(input);
-      
       const finishReason = String(result.finishReason);
       if (finishReason === 'blocked' || finishReason === 'other') {
         throw new Error("blocked");
       }
-
       if (!result.output) {
         throw new Error("EMPTY_OUTPUT");
       }
-      
       return result.output;
     } catch (error: any) {
-      console.warn(`Attempt ${attempt + 1} failed:`, error.message);
-      
-      if (attempt < maxRetries && (error.message.includes('429') || error.name === 'ZodError' || error.message === 'EMPTY_OUTPUT')) {
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      if (attempt < maxRetries && (String(error.message).includes('429') || error.name === 'ZodError')) {
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1500));
         continue;
       }
-
       throw new Error(handleGeminiError(error));
     }
   }
-  throw new Error("فشلت جميع المحاولات لتوليد التقرير.");
+  throw new Error("فشلت عملية توليد التقرير بعد عدة محاولات.");
 }

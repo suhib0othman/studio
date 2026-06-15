@@ -33,7 +33,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFriendlyAuthErrorMessage, type FriendlyError } from "@/firebase/auth-errors";
 
-// Set max duration for Server Actions on this page
 export const maxDuration = 60;
 
 interface AssessmentOption {
@@ -148,18 +147,12 @@ export default function AssessmentPage() {
     } catch (err: any) {
       console.error("Submission Error:", err);
       setIsProcessing(false);
-      
-      const rawMessage = err instanceof Error ? err.message : String(err);
-      
       setErrorInfo({
-        message: rawMessage.includes("Internal Server Error") || rawMessage.includes("500")
-          ? "حدث خطأ في الخادم أثناء تحليل بياناتك. غالباً ما يكون ذلك بسبب ضغط الطلبات."
-          : rawMessage,
+        message: err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء معالجة البيانات.",
         steps: [
           "تأكد من استقرار اتصال الإنترنت لديك.",
           "أعد المحاولة بعد دقيقة واحدة لتجنب ضغط الخادم.",
-          "إذا استمرت المشكلة، جرب تسجيل الدخول قبل البدء بالتقييم.",
-          "تأكد من اختيار إجابات منطقية وواضحة."
+          "إذا استمرت المشكلة، حاول تسجيل الدخول قبل البدء بالتقييم."
         ]
       });
     }

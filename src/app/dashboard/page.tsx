@@ -190,7 +190,7 @@ export default function DashboardPage() {
         </div>
 
         <Dialog open={!!selectedOpp} onOpenChange={() => setSelectedOpp(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0" dir="rtl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 text-right border-none">
             {selectedOpp && (
               <div className="relative">
                 <div className="h-48 bg-gradient-to-l from-primary/30 to-secondary/30 flex items-center px-12">
@@ -202,14 +202,14 @@ export default function DashboardPage() {
                 </div>
                 <div className="p-10 space-y-12">
                   <section>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Info className="w-5 h-5 text-primary" />
+                    <div className="flex items-center gap-2 mb-4 justify-end">
                       <h3 className="text-xl font-bold">لماذا تناسبك هذه الفرصة؟</h3>
+                      <Info className="w-5 h-5 text-primary" />
                     </div>
                     <p className="text-muted-foreground leading-relaxed text-lg">{selectedOpp.whyThisFitsYou}</p>
                   </section>
                   <section className="bg-white/5 rounded-3xl p-8">
-                    <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center justify-between mb-8 flex-row-reverse">
                        <h3 className="text-2xl font-bold">خطة التنفيذ خطوة بخطوة</h3>
                        <Button size="sm" variant="ghost" onClick={() => handleCopyPlan(selectedOpp.stepByStepExecutionPlan)}>
                          <Copy className="w-4 h-4 ml-2" /> {copySuccess ? "تم النسخ!" : "نسخ الخطة"}
@@ -217,7 +217,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="space-y-6">
                       {selectedOpp.stepByStepExecutionPlan.map((step: string, i: number) => (
-                        <div key={i} className="flex gap-4 items-start">
+                        <div key={i} className="flex gap-4 items-start flex-row-reverse">
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-primary font-bold">{i + 1}</div>
                           <p className="text-muted-foreground text-lg flex-1">{step}</p>
                         </div>

@@ -1,6 +1,7 @@
 'use server';
 /**
- * @fileOverview Refactored share card flow with Genkit 1.x API compatibility.
+ * @fileOverview Share card content generator using Genkit 1.x.
+ * Fixed Zod validation and prompt instructions.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -29,10 +30,10 @@ const generateShareCardContentPrompt = ai.definePrompt({
   input: { schema: GenerateShareCardContentInputSchema },
   output: { schema: GenerateShareCardContentOutputSchema },
   config: { temperature: 0.4 },
-  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". مهمتك تحويل بيانات نجاح المستخدم إلى محتوى بطاقة مشاركة ملهمة ومختصرة.
-أجب بصيغة JSON فقط، دون استخدام Markdown.
-يجب أن تحتوي مصفوفة "topThreeOpportunityNames" على 3 عناصر على الأقل.`,
-  prompt: `قم بتحويل بيانات المستخدم التالية إلى محتوى بطاقة مشاركة ملهم:
+  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". حول بيانات النجاح إلى محتوى بطاقة مشاركة ملهمة.
+أجب بصيغة JSON فقط، دون Markdown.
+يجب أن تحتوي قائمة "topThreeOpportunityNames" على 3 عناصر على الأقل.`,
+  prompt: `قم بتحويل البيانات التالية إلى محتوى بطاقة مشاركة:
 مؤشر الثراء: {{{aiWealthScore}}}
 الملخص: {{{profileSummary}}}
 الوسام: {{{achievementBadge}}}
@@ -45,29 +46,12 @@ const generateShareCardContentPrompt = ai.definePrompt({
 export async function generateShareCardContent(
   input: GenerateShareCardContentInput
 ): Promise<GenerateShareCardContentOutput> {
-  const maxRetries = 2;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const result = await generateShareCardContentPrompt(input);
-      
-      const finishReason = String(result.finishReason);
-      if (finishReason === 'blocked' || finishReason === 'other') {
-        throw new Error("blocked");
-      }
-
-      if (!result.output) {
-        throw new Error("EMPTY_OUTPUT");
-      }
-      
-      return result.output;
-    } catch (error: any) {
-      if (attempt < maxRetries && (error.message.includes('429') || error.name === 'ZodError')) {
-        await new Promise(res => setTimeout(res, Math.pow(2, attempt) * 1500));
-        continue;
-      }
-      throw new Error("فشل توليد محتوى بطاقة المشاركة.");
-    }
+  try {
+    const result = await generateShareCardContentPrompt(input);
+    if (!result.output) throw new Error("EMPTY_OUTPUT");
+    return result.output;
+  } catch (error: any) {
+    console.error("Share card error:", error);
+    throw new Error("فشل توليد محتوى بطاقة المشاركة.");
   }
-  throw new Error("فشلت محاولات توليد محتوى البطاقة.");
 }

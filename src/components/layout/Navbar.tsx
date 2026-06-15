@@ -31,7 +31,6 @@ export function Navbar() {
       await signInWithPopup(auth, provider);
       toast({ title: "مرحباً بك", description: "تم تسجيل دخولك بنجاح." });
     } catch (error: any) {
-      // Graceful handling of common auth errors
       if (error.code === 'auth/popup-closed-by-user') {
         setIsLoggingIn(false);
         return;
@@ -43,11 +42,6 @@ export function Navbar() {
         title: friendly.message, 
         description: friendly.steps[0] 
       });
-      
-      // Keep developer informed in dev mode without overlay
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(`[Auth Diagnostic]: ${error.code} - ${error.message}`);
-      }
     } finally {
       setIsLoggingIn(false);
     }
@@ -90,16 +84,16 @@ export function Navbar() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 glass-card border-white/10 p-2 mt-2" dir="rtl">
-                <div className="px-3 py-2 border-b border-white/5 mb-1">
+              <DropdownMenuContent align="end" className="w-56 glass-card border-white/10 p-2 mt-2">
+                <div className="px-3 py-2 border-b border-white/5 mb-1 text-right">
                    <p className="text-sm font-bold truncate">{user.displayName}</p>
                    <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
                 </div>
-                <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                <DropdownMenuItem asChild className="rounded-lg cursor-pointer justify-end">
                   <Link href="/dashboard" className="w-full text-right font-bold">لوحة التحكم</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="rounded-lg cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 text-right font-bold">
-                  تسجيل الخروج <LogOut className="mr-auto h-4 w-4" />
+                <DropdownMenuItem onClick={handleLogout} className="rounded-lg cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 justify-end font-bold">
+                  تسجيل الخروج <LogOut className="mr-2 h-4 w-4" />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
