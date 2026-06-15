@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
- * Includes exponential backoff retry logic for 429 errors and deep forensic logging.
+ * Includes improved validation handling to prevent 500 Internal Server Errors.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -45,7 +45,8 @@ const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
   growthPotential: z.string(),
   bestBusinessModel: z.string(),
   bestMonetizationMethod: z.string(),
-  opportunities: z.array(OpportunitySchema).length(5),
+  // Use min(1) instead of exact length to prevent validation crashes if AI returns 4 or 6 items
+  opportunities: z.array(OpportunitySchema).min(1),
 });
 
 export type GeneratePersonalizedOpportunitiesInput = z.infer<typeof GeneratePersonalizedOpportunitiesInputSchema>;
@@ -84,48 +85,39 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 export async function generatePersonalizedOpportunities(
   input: GeneratePersonalizedOpportunitiesInput
 ): Promise<GeneratePersonalizedOpportunitiesOutput> {
-  const maxRetries = 3;
+  const maxRetries = 2;
   let lastError: any;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const { output, response } = await generateOpportunitiesPrompt(input);
+      const result = await generateOpportunitiesPrompt(input);
       
-      if (!output) {
-        const reason = response?.candidates?.[0]?.finishReason;
-        if (reason === 'SAFETY') throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل بعض الكلمات في مدخلاتك.");
+      if (!result.output) {
+        if (result.finishReason === 'SAFETY') {
+          throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل بعض الكلمات في مدخلاتك.");
+        }
         throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج بالهيكل المطلوب.");
       }
       
-      return output;
+      return result.output;
     } catch (error: any) {
       lastError = error;
+      console.error(`--- [AI ERROR DEBUG] (Attempt ${attempt + 1}) ---`, error.message);
       
-      // DEEP FORENSIC LOGGING: Print original Gemini error before any transformation
-      console.error(`--- [RAW GEMINI ERROR DEBUG] (Attempt ${attempt + 1}) ---`);
-      console.error("Message:", error.message);
-      console.error("Code:", error.code);
-      console.error("Status:", error.status);
-      console.error("Details:", JSON.stringify(error.details, null, 2));
-      if (error.response) {
-        console.error("Raw API Response Body:", JSON.stringify(error.response, null, 2));
-      }
-      console.error("--- [RAW GEMINI ERROR DEBUG END] ---");
-
-      const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
+      const isRateLimit = error.message?.includes('429') || (error.status === 429);
       
-      if (is429 && attempt < maxRetries) {
+      if (isRateLimit && attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 2000;
-        console.warn(`⚠️ [AI Retry]: Attempt ${attempt + 1} failed with 429. Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
 
-      if (is429) {
-        throw new Error("تم تجاوز حد الطلبات المسموح به. يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");
+      // If it's a validation error (Zod), we don't retry, just throw a cleaner message
+      if (error.name === 'ZodError' || error.message?.includes('validation')) {
+        throw new Error("حدث خطأ في معالجة البيانات من قبل الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.");
       }
-      
-      throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير.");
+
+      throw error;
     }
   }
   throw lastError;

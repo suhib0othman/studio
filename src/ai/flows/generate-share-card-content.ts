@@ -58,19 +58,16 @@ export async function generateShareCardContent(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const { output } = await generateShareCardContentPrompt(input);
+      const result = await generateShareCardContentPrompt(input);
+      const output = result.output;
+      
       if (!output) throw new Error('AI returned no output for the share card.');
       return output;
     } catch (error: any) {
       lastError = error;
 
-      // DEEP FORENSIC LOGGING: Print original Gemini error before any transformation
-      console.error(`--- [RAW SHARE CARD ERROR DEBUG] (Attempt ${attempt + 1}) ---`);
+      console.error(`--- [SHARE CARD ERROR DEBUG] (Attempt ${attempt + 1}) ---`);
       console.error("Message:", error.message);
-      console.error("Code:", error.code);
-      console.error("Status:", error.status);
-      console.error("Details:", JSON.stringify(error.details, null, 2));
-      console.error("--- [RAW SHARE CARD ERROR DEBUG END] ---");
 
       const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
       
