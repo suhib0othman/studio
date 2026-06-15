@@ -37,6 +37,8 @@ const OpportunitySchema = z.object({
   expectedTimeline: z.string(),
 });
 
+export type Opportunity = z.infer<typeof OpportunitySchema>;
+
 const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
   aiWealthScore: z.coerce.number().min(0).max(100),
   achievementBadge: z.string(),
@@ -89,6 +91,7 @@ function handleGeminiError(error: any): string {
     return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
   }
   if (msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به. يرجى الانتظار دقيقة والمحاولة مجدداً.";
+  if (msg.includes('404')) return "خطأ في إعدادات المحرك. يرجى مراجعة مفتاح الربط.";
   if (msg.includes('500') || msg.includes('503')) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً حالياً.";
   
   return "حدث خطأ أثناء معالجة البيانات. يرجى المحاولة مرة أخرى.";

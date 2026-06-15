@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import type { GeneratePersonalizedOpportunitiesOutput } from "@/ai/flows/generate-personalized-opportunities";
+import type { GeneratePersonalizedOpportunitiesOutput, Opportunity } from "@/ai/flows/generate-personalized-opportunities";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -38,12 +38,12 @@ export default function DashboardPage() {
   const { toast } = useToast();
   
   const [localData, setLocalData] = useState<GeneratePersonalizedOpportunitiesOutput | null>(null);
-  const [selectedOpp, setSelectedOpp] = useState<any | null>(null);
+  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   const userResultRef = useMemo(() => user ? doc(db, "results", user.uid) : null, [user, db]);
-  const { data: firestoreData, loading: firestoreLoading } = useDoc<any>(userResultRef);
+  const { data: firestoreData, loading: firestoreLoading } = useDoc<GeneratePersonalizedOpportunitiesOutput>(userResultRef as any);
 
   useEffect(() => {
     setIsMounted(true);
@@ -63,7 +63,7 @@ export default function DashboardPage() {
     }
   }, [isMounted, authLoading, user, localData, firestoreData, firestoreLoading, router]);
 
-  const data = firestoreData || localData;
+  const data = (firestoreData || localData) as GeneratePersonalizedOpportunitiesOutput | null;
 
   const handleCopyPlan = async (plan: string[]) => {
     try {
@@ -159,7 +159,7 @@ export default function DashboardPage() {
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.opportunities?.map((opp, i) => (
+            {data.opportunities?.map((opp: Opportunity, i: number) => (
               <Card key={i} className="glass-card group hover:border-primary/50 transition-all">
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start mb-2">

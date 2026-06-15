@@ -22,8 +22,7 @@ import {
   LogIn,
   AlertCircle,
   RefreshCcw,
-  ShieldCheck,
-  Loader2
+  ShieldCheck
 } from "lucide-react";
 import { generatePersonalizedOpportunities } from "@/ai/flows/generate-personalized-opportunities";
 import { cn } from "@/lib/utils";
@@ -37,17 +36,17 @@ import { getFriendlyAuthErrorMessage, type FriendlyError } from "@/firebase/auth
 // Set max duration for Server Actions on this page
 export const maxDuration = 60;
 
-type AssessmentOption = {
+interface AssessmentOption {
   label: string;
   desc?: string;
-};
+}
 
-type AssessmentQuestion = {
+interface AssessmentQuestion {
   id: string;
   label: string;
-  icon: React.ElementType;
+  icon: any;
   options: AssessmentOption[];
-};
+}
 
 const QUESTIONS: AssessmentQuestion[] = [
   { 
@@ -55,7 +54,7 @@ const QUESTIONS: AssessmentQuestion[] = [
     label: "ما هو مجال خبرتك أو شغفك الأساسي؟", 
     icon: Star, 
     options: [
-      { label: "التقنية والتطوير الرقمي", desc: "البرمجة، المواقع، الذكاء الاصطناعي" },
+      { label: "التقنية والتطوير الرقمي", desc: "البرمجة، المواقع، الذكاء الاصعطناعي" },
       { label: "الكتابة وصناعة المحتوى", desc: "المقالات، الترجمة، الإعلانات" },
       { label: "التصميم والإبداع الرقمي", desc: "الجرافيك، الفيديو، المونتاج" },
       { label: "التسويق والمبيعات", desc: "التسويق الرقمي، إدارة العلامات التجارية" },
