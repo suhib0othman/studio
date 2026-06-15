@@ -1,6 +1,5 @@
 /**
  * @fileOverview Friendly Arabic translation for Firebase Auth error codes.
- * Sanitized to remove all patterns that trigger GitHub Push Protection.
  */
 
 export interface FriendlyError {
@@ -11,24 +10,24 @@ export interface FriendlyError {
 export const getFriendlyAuthErrorMessage = (errorCode: string): FriendlyError => {
   const code = errorCode.toLowerCase().trim();
 
-  // Handle generic API key errors without using forbidden patterns
-  if (code.includes('api-key-expired') || code.includes('invalid-api-key')) {
+  // Mapping specific technical errors to friendly guidance
+  if (code.includes('api-key-not-valid') || code.includes('invalid-api-key')) {
     return {
-      message: 'انتهت صلاحية مفتاح الوصول',
+      message: 'إعدادات الاتصال غير مكتملة',
       steps: [
-        'يبدو أن مفتاح الوصول المستخدم غير صالح أو انتهت صلاحيته.',
-        'تحقق من إعدادات المفتاح في لوحة تحكم المشروع.',
-        'تأكد من تحديث متغيرات البيئة في لوحة التحكم.'
+        'تأكد من إعداد متغيرات البيئة (Environment Variables) بشكل صحيح.',
+        'تأكد من إضافة NEXT_PUBLIC_FIREBASE_API_KEY في ملف الـ .env',
+        'أعد تشغيل الخادم بعد تحديث المتغيرات.'
       ]
     };
   }
 
-  if (code.includes('restricted') || code.includes('not-supported')) {
+  if (code.includes('unauthorized-domain')) {
     return {
-      message: 'قيود الوصول تمنع تسجيل الدخول',
+      message: 'نطاق الوصول غير مصرح به',
       steps: [
-        'تحتاج لتفعيل صلاحيات الوصول اللازمة في قيود المفتاح.',
-        'تأكد من إعدادات النطاقات المعتمدة (Authorized Domains).'
+        'يجب إضافة النطاق الحالي إلى قائمة النطاقات المعتمدة في Firebase Console.',
+        'اذهب إلى Authentication > Settings > Authorized Domains وأضف الرابط الحالي.'
       ]
     };
   }
@@ -47,22 +46,20 @@ export const getFriendlyAuthErrorMessage = (errorCode: string): FriendlyError =>
         message: 'خطأ في الاتصال بالشبكة',
         steps: [
           'تأكد من استقرار اتصالك بالإنترنت.',
-          'أغلق أي برنامج قد يعيق الاتصال بخدمات المصادقة.'
+          'أغلق أي برنامج (VPN) قد يعيق الاتصال.'
         ]
       };
     case 'auth/popup-closed-by-user':
       return {
-        message: 'تم إغلاق النافذة قبل إتمام الدخول',
-        steps: [
-          'يرجى المحاولة مجدداً وعدم إغلاق النافذة المنبثقة.'
-        ]
+        message: 'تم إغلاق النافذة',
+        steps: ['يرجى إكمال عملية الدخول عبر النافذة المنبثقة دون إغلاقها.']
       };
     default:
       return {
         message: 'حدث خطأ في المصادقة',
         steps: [
           'أعد تحميل الصفحة وحاول مجدداً.',
-          'تأكد من إعدادات المشروع الخاص بك.'
+          'تأكد من تفعيل مزود Google في لوحة تحكم Firebase.'
         ]
       };
   }

@@ -26,11 +26,12 @@ export function Navbar() {
     setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
+    
     try {
       await signInWithPopup(auth, provider);
       toast({ title: "مرحباً بك", description: "تم تسجيل دخولك بنجاح." });
     } catch (error: any) {
-      // Don't show destructive toast for user-initiated cancellation
+      // Graceful handling of common auth errors
       if (error.code === 'auth/popup-closed-by-user') {
         setIsLoggingIn(false);
         return;
@@ -42,6 +43,11 @@ export function Navbar() {
         title: friendly.message, 
         description: friendly.steps[0] 
       });
+      
+      // Keep developer informed in dev mode without overlay
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[Auth Diagnostic]: ${error.code} - ${error.message}`);
+      }
     } finally {
       setIsLoggingIn(false);
     }
