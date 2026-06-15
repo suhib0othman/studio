@@ -1,6 +1,7 @@
 'use server';
 /**
  * @fileOverview This file implements a Genkit flow to generate personalized share card content.
+ * Includes diagnostic logging for API errors.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -29,7 +30,7 @@ const generateShareCardContentPrompt = ai.definePrompt({
   input: { schema: GenerateShareCardContentInputSchema },
   output: { schema: GenerateShareCardContentOutputSchema },
   config: {
-    temperature: 0.4, // Slightly higher for more creative social messages
+    temperature: 0.4,
   },
   system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". مهمتك هي إنشاء محتوى جذاب لبطاقة مشاركة اجتماعية بصيغة JSON.
 
@@ -57,7 +58,11 @@ export async function generateShareCardContent(
     if (!output) throw new Error('AI returned no output for the share card.');
     return output;
   } catch (error: any) {
-    console.error("❌ [Share Card Flow Error]: ", error);
+    console.error("❌ [SHARE CARD FLOW ERROR]:", error.message);
+    
+    if (error.details) {
+      console.error("-> Raw details:", JSON.stringify(error.details, null, 2));
+    }
     
     if (error.message?.includes('429')) {
       throw new Error("تم تجاوز حد الطلبات. يرجى المحاولة بعد قليل.");

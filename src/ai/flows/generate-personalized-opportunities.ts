@@ -1,6 +1,7 @@
 'use server';
 /**
  * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
+ * Includes deep diagnostic logging for API errors.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -64,7 +65,7 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 
 تعليمات تقنية حاسمة:
 1. يجب أن يكون الرد بصيغة JSON خام فقط.
-2. لا تضف أي نصوص مقدمة أو خاتمة أو علامات Markdown (مثل \`\`\`json).
+2. لا تضف أي نصوص مقدمة أو خاتمة أو علامات Markdown.
 3. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
 4. تأكد من تقديم 5 فرص متنوعة بدقة وتفصيل.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
@@ -88,20 +89,31 @@ export async function generatePersonalizedOpportunities(
     
     if (!output) {
       const reason = response?.candidates?.[0]?.finishReason;
+      console.warn("⚠️ [AI Parsing Warning]: No structured output returned. Finish Reason:", reason);
+      
       if (reason === 'SAFETY') throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل بعض الكلمات في مدخلاتك.");
       throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج بالهيكل المطلوب. يرجى المحاولة مرة أخرى.");
     }
     
     return output;
   } catch (error: any) {
-    console.error("AI Flow Error:", error);
+    // --- DEEP DIAGNOSTIC LOGGING ---
+    console.error("❌ [AI FLOW CRITICAL ERROR]:");
+    console.error("-> Message:", error.message);
+    
+    if (error.details) {
+      console.error("-> Raw API Details:", JSON.stringify(error.details, null, 2));
+    }
+    
+    const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
+    
+    if (is429) {
+      console.error("-> Analysis: Quota or Rate Limit hit. Check Gemini Dashboard.");
+      throw new Error("تم تجاوز حد الطلبات المسموح به (429). يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");
+    }
     
     if (error.message?.includes('404')) {
       throw new Error("حدث خطأ في الاتصال بنموذج الذكاء الاصطناعي (Model Not Found). يرجى التحقق من إعدادات المفتاح.");
-    }
-    
-    if (error.message?.includes('429')) {
-      throw new Error("تم تجاوز حد الطلبات المسموح به. يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");
     }
 
     throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير.");
