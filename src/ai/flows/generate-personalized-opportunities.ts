@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
- * Includes exponential backoff retry logic for 429 errors.
+ * Includes exponential backoff retry logic for 429 errors and deep forensic logging.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -100,6 +100,18 @@ export async function generatePersonalizedOpportunities(
       return output;
     } catch (error: any) {
       lastError = error;
+      
+      // DEEP FORENSIC LOGGING: Print original Gemini error before any transformation
+      console.error(`--- [RAW GEMINI ERROR DEBUG] (Attempt ${attempt + 1}) ---`);
+      console.error("Message:", error.message);
+      console.error("Code:", error.code);
+      console.error("Status:", error.status);
+      console.error("Details:", JSON.stringify(error.details, null, 2));
+      if (error.response) {
+        console.error("Raw API Response Body:", JSON.stringify(error.response, null, 2));
+      }
+      console.error("--- [RAW GEMINI ERROR DEBUG END] ---");
+
       const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
       
       if (is429 && attempt < maxRetries) {
@@ -108,10 +120,6 @@ export async function generatePersonalizedOpportunities(
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
-
-      // Final failure handling
-      console.error(`❌ [AI FLOW ERROR] (Attempt ${attempt + 1}):`, error.message);
-      if (error.details) console.error("-> Raw Details:", JSON.stringify(error.details, null, 2));
 
       if (is429) {
         throw new Error("تم تجاوز حد الطلبات المسموح به. يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");

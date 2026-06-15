@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview This file implements a Genkit flow to generate personalized share card content.
- * Includes exponential backoff retry logic for 429 errors.
+ * Includes exponential backoff retry logic for 429 errors and forensic logging.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -63,6 +63,15 @@ export async function generateShareCardContent(
       return output;
     } catch (error: any) {
       lastError = error;
+
+      // DEEP FORENSIC LOGGING: Print original Gemini error before any transformation
+      console.error(`--- [RAW SHARE CARD ERROR DEBUG] (Attempt ${attempt + 1}) ---`);
+      console.error("Message:", error.message);
+      console.error("Code:", error.code);
+      console.error("Status:", error.status);
+      console.error("Details:", JSON.stringify(error.details, null, 2));
+      console.error("--- [RAW SHARE CARD ERROR DEBUG END] ---");
+
       const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
       
       if (is429 && attempt < maxRetries) {
@@ -72,7 +81,6 @@ export async function generateShareCardContent(
         continue;
       }
 
-      console.error(`❌ [SHARE CARD FLOW ERROR] (Attempt ${attempt + 1}):`, error.message);
       if (is429) {
         throw new Error("تم تجاوز حد الطلبات. يرجى المحاولة بعد قليل.");
       }
