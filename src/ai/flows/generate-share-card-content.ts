@@ -28,18 +28,25 @@ const generateShareCardContentPrompt = ai.definePrompt({
   model: geminiModel,
   input: { schema: GenerateShareCardContentInputSchema },
   output: { schema: GenerateShareCardContentOutputSchema },
-  prompt: `أنت مساعد ذكي لبرنامج "AI Assist Pro". قم بتوليد محتوى نصي لبطاقة مشاركة ملهمة.
+  config: {
+    temperature: 0.4, // Slightly higher for more creative social messages
+  },
+  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". مهمتك هي إنشاء محتوى جذاب لبطاقة مشاركة اجتماعية بصيغة JSON.
 
-بيانات المستخدم:
+قواعد الإخراج:
+1. يجب أن يكون الإخراج JSON صالحاً فقط.
+2. لا تضف أي نصوص مقدمة أو خاتمة.
+3. ركز على اللغة العربية القوية والملهمة.`,
+  prompt: `قم بتحويل بيانات المستخدم التالية إلى محتوى بطاقة مشاركة ملهم:
 مؤشر الثراء: {{{aiWealthScore}}}
-ملخص الملف: {{{profileSummary}}}
+الملخص: {{{profileSummary}}}
 الوسام: {{{achievementBadge}}}
 الفرص:
 {{#each topOpportunities}}
 - {{{this}}}
 {{/each}}
 
-قم بإنشاء رسالة قصيرة وملهمة باللغة العربية تبرز أهم 3 فرص، مع التركيز على الابتكار والذكاء الاصطناعي.`,
+قم بإنشاء رسالة قصيرة ومؤثرة تبرز الإمكانات الرقمية للمستخدم.`,
 });
 
 export async function generateShareCardContent(
@@ -47,13 +54,13 @@ export async function generateShareCardContent(
 ): Promise<GenerateShareCardContentOutput> {
   try {
     const { output } = await generateShareCardContentPrompt(input);
-    if (!output) throw new Error('AI returned no output.');
+    if (!output) throw new Error('AI returned no output for the share card.');
     return output;
   } catch (error: any) {
     console.error("❌ [Share Card Flow Error]: ", error);
     
-    if (error.message?.includes('404')) {
-      throw new Error(`Gemini API 404 (Not Found): لم يتم العثور على الموديل. تم تحديث الإعدادات، يرجى إعادة تشغيل الخادم.`);
+    if (error.message?.includes('429')) {
+      throw new Error("تم تجاوز حد الطلبات. يرجى المحاولة بعد قليل.");
     }
     
     throw new Error(error.message || "فشل توليد محتوى بطاقة المشاركة.");

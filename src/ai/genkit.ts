@@ -19,7 +19,8 @@ export const ai = genkit({
 });
 
 /**
- * Model reference using string ID for maximum compatibility.
+ * Model reference using string ID for maximum compatibility with Genkit 1.x.
+ * Using Gemini 1.5 Flash for optimal performance and schema reliability.
  */
 export const geminiModel = 'googleai/gemini-1.5-flash';
 

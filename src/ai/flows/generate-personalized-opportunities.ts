@@ -56,28 +56,29 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
   config: {
-    temperature: 0.15, // Low temperature for maximum schema compliance
-    topP: 0.7,
+    temperature: 0.1, // Low temperature for maximum schema compliance
+    topP: 0.8,
   },
   system: `أنت خبير استراتيجي في الأعمال والذكاء الاصطناعي.
-مهمتك: توليد تقرير JSON متوافق تماماً مع الهيكل المطلوب.
+مهمتك الأساسية هي توليد تقرير JSON متوافق تماماً مع الهيكل المطلوب.
 
-قواعد صارمة:
-1. الرد يجب أن يكون JSON فقط. لا تضف أي نص توضيحي أو علامات Markdown.
-2. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية.
-3. تأكد من تقديم 5 فرص متنوعة بدقة.
-4. ابدأ الرد بـ { وانتهِ بـ }.`,
-  prompt: `حلل البيانات التالية وقدم تقريراً استشارياً:
+قواعد صارمة لضمان النجاح التقني:
+1. الرد يجب أن يكون JSON صالح (Pure JSON) فقط.
+2. لا تضف أي نص توضيحي قبل أو بعد الـ JSON.
+3. لا تستخدم علامات Markdown (مثل \`\`\`json). ابدأ بـ { وانتهِ بـ }.
+4. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
+5. تأكد من تقديم 5 فرص متنوعة بدقة وتفصيل.`,
+  prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
 خبرة المستخدم: {{{primaryExpertise}}}
-الوقت: {{{availableHoursPerWeek}}}
+الوقت المتاح: {{{availableHoursPerWeek}}}
 الهدف المالي: {{{incomeGoal}}}
-الميزانية: {{{availableBudget}}}
+الميزانية المتاحة: {{{availableBudget}}}
 المستوى: {{{experienceLevel}}}
-النمط: {{{workPreference}}}
+النمط المفضل: {{{workPreference}}}
 النشاط المفضل: {{{preferredActivity}}}
-القوة: {{{greatestStrength}}}
+نقطة القوة: {{{greatestStrength}}}
 المخاطرة: {{{riskTolerance}}}
-الهدف: {{{primaryGoal}}}`,
+الهدف الأساسي: {{{primaryGoal}}}`,
 });
 
 export async function generatePersonalizedOpportunities(
@@ -88,14 +89,23 @@ export async function generatePersonalizedOpportunities(
     
     if (!output) {
       const reason = response?.candidates?.[0]?.finishReason;
-      if (reason === 'SAFETY') throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل مدخلاتك.");
-      throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج. يرجى المحاولة مرة أخرى.");
+      if (reason === 'SAFETY') throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل بعض الكلمات في مدخلاتك.");
+      throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج بالهيكل المطلوب. يرجى المحاولة مرة أخرى.");
     }
     
     return output;
   } catch (error: any) {
     console.error("AI Flow Error:", error);
-    if (error.message?.includes('429')) throw new Error("تم تجاوز حد الطلبات (Rate Limit). يرجى الانتظار دقيقة.");
-    throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير.");
+    
+    // Transparent error propagation for better UX and debugging
+    if (error.message?.includes('429')) {
+      throw new Error("تم تجاوز حد الطلبات المسموح به. يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");
+    }
+    
+    if (error.message?.includes('401') || error.message?.includes('403')) {
+      throw new Error("خطأ في صلاحيات الوصول لمحرك الذكاء الاصطناعي. يرجى مراجعة إعدادات الخادم.");
+    }
+
+    throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير. يرجى التأكد من اتصالك بالإنترنت.");
   }
 }
