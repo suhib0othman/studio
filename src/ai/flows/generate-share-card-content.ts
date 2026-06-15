@@ -31,7 +31,7 @@ const generateShareCardContentPrompt = ai.definePrompt({
   config: { temperature: 0.4 },
   system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". مهمتك تحويل بيانات نجاح المستخدم إلى محتوى بطاقة مشاركة ملهمة ومختصرة.
 أجب بصيغة JSON فقط، دون استخدام Markdown أو علامات \`\`\`json.
-يجب أن تحتوي مصفوفة "topThreeOpportunityNames" على 3 عناصر على الأقل.`,
+يجب أن تحتوي مصفوفة "topThreeOpportunityNames" على ما لا يقل عن 3 عناصر.`,
   prompt: `قم بتحويل بيانات المستخدم التالية إلى محتوى بطاقة مشاركة ملهم:
 مؤشر الثراء: {{{aiWealthScore}}}
 الملخص: {{{profileSummary}}}
@@ -51,7 +51,7 @@ export async function generateShareCardContent(
     try {
       const result = await generateShareCardContentPrompt(input);
       
-      if (result.finishReason === 'blocked') {
+      if ((result.finishReason as string) === 'blocked') {
         throw new Error("blocked");
       }
 

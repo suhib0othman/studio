@@ -85,7 +85,7 @@ function handleGeminiError(error: any): string {
   const msg = String(error?.message || "");
   const status = error?.status || error?.code;
   
-  if (msg.includes('blocked') || msg.includes('SAFETY') || error?.finishReason === 'blocked') {
+  if (msg.includes('blocked') || msg.includes('SAFETY') || (error?.finishReason as string) === 'blocked') {
     return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
   }
 
@@ -98,13 +98,14 @@ function handleGeminiError(error: any): string {
 export async function generatePersonalizedOpportunities(
   input: GeneratePersonalizedOpportunitiesInput
 ): Promise<GeneratePersonalizedOpportunitiesOutput> {
-  const maxRetries = 2;
+  const maxRetries = 3;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const result = await generateOpportunitiesPrompt(input);
       
-      if (result.finishReason === 'blocked') {
+      // Type-safe check for finishReason
+      if ((result.finishReason as string) === 'blocked') {
         throw new Error("blocked");
       }
 
@@ -120,10 +121,11 @@ export async function generatePersonalizedOpportunities(
         error?.message?.includes('429') || 
         error?.status === 429 || 
         error?.message === 'EMPTY_OUTPUT' ||
-        error?.name === 'ZodError'; // Retry if AI format was slightly off
+        error?.name === 'ZodError';
       
       if (isRetryable && attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 2000));
+        // Exponential backoff: 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         continue;
       }
 
