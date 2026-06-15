@@ -37,7 +37,19 @@ import { getFriendlyAuthErrorMessage, type FriendlyError } from "@/firebase/auth
 // Set max duration for Server Actions on this page
 export const maxDuration = 60;
 
-const QUESTIONS = [
+type AssessmentOption = {
+  label: string;
+  desc?: string;
+};
+
+type AssessmentQuestion = {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  options: AssessmentOption[];
+};
+
+const QUESTIONS: AssessmentQuestion[] = [
   { 
     id: "primaryExpertise", 
     label: "ما هو مجال خبرتك أو شغفك الأساسي؟", 

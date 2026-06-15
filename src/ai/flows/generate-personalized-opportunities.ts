@@ -22,7 +22,7 @@ const GeneratePersonalizedOpportunitiesInputSchema = z.object({
 
 const OpportunitySchema = z.object({
   name: z.string().describe('Opportunity name in Arabic'),
-  compatibilityScore: z.number().min(0).max(100),
+  compatibilityScore: z.coerce.number().min(0).max(100),
   monthlyIncomePotential: z.string(),
   difficultyLevel: z.string(),
   startupCost: z.string(),
@@ -38,7 +38,7 @@ const OpportunitySchema = z.object({
 });
 
 const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
-  aiWealthScore: z.number().min(0).max(100),
+  aiWealthScore: z.coerce.number().min(0).max(100),
   achievementBadge: z.string(),
   profileSummary: z.string(),
   personalityType: z.string(),
@@ -67,7 +67,7 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 1. يجب أن يكون الرد JSON صالحاً تماماً (Strict JSON).
 2. لا تستخدم Markdown (لا تضع \`\`\`json في البداية أو النهاية).
 3. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية والملهمة.
-4. املأ جميع الحقول المطلوبة في المخطط (Schema)؛ لا تترك حقولاً فارغة.`,
+4. املأ جميع الحقول المطلوبة؛ استخدم أرقاماً مجردة للحقول الرقمية.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
 خبرة المستخدم: {{{primaryExpertise}}}
 الوقت المتاح: {{{availableHoursPerWeek}}}
@@ -83,16 +83,15 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 
 function handleGeminiError(error: any): string {
   const msg = String(error?.message || "");
-  const status = error?.status || error?.code;
+  console.error("Gemini Error Detail:", error);
   
-  if (msg.includes('blocked') || msg.includes('SAFETY') || msg.includes('candidate')) {
+  if (msg.includes('blocked') || msg.includes('SAFETY')) {
     return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
   }
-
-  if (status === 429 || msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به. يرجى الانتظار دقيقة والمحاولة مجدداً.";
-  if (status === 500 || status === 503 || msg.includes('503')) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً. حاول مجدداً بعد قليل.";
+  if (msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به. يرجى الانتظار دقيقة والمحاولة مجدداً.";
+  if (msg.includes('500') || msg.includes('503')) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً حالياً.";
   
-  return "حدث خطأ غير متوقع أثناء تحليل البيانات. يرجى المحاولة مرة أخرى.";
+  return "حدث خطأ أثناء معالجة البيانات. يرجى المحاولة مرة أخرى.";
 }
 
 export async function generatePersonalizedOpportunities(
@@ -104,8 +103,7 @@ export async function generatePersonalizedOpportunities(
     try {
       const result = await generateOpportunitiesPrompt(input);
       
-      // Genkit 1.x: check finishReason on result
-      const finishReason = result.finishReason as string;
+      const finishReason = String(result.finishReason);
       if (finishReason === 'blocked' || finishReason === 'other') {
         throw new Error("blocked");
       }
@@ -116,16 +114,9 @@ export async function generatePersonalizedOpportunities(
       
       return result.output;
     } catch (error: any) {
-      console.error(`--- [AI ATTEMPT ${attempt + 1}] ---`, error?.message);
+      console.warn(`Attempt ${attempt + 1} failed:`, error.message);
       
-      const isRetryable = 
-        error?.message?.includes('429') || 
-        error?.status === 429 || 
-        error?.message === 'EMPTY_OUTPUT' ||
-        error?.name === 'ZodError';
-      
-      if (isRetryable && attempt < maxRetries) {
-        // Exponential backoff
+      if (attempt < maxRetries && (error.message.includes('429') || error.name === 'ZodError' || error.message === 'EMPTY_OUTPUT')) {
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
         continue;
       }
@@ -133,5 +124,5 @@ export async function generatePersonalizedOpportunities(
       throw new Error(handleGeminiError(error));
     }
   }
-  throw new Error("فشلت جميع المحاولات لتوليد التقرير. يرجى المحاولة لاحقاً.");
+  throw new Error("فشلت جميع المحاولات لتوليد التقرير.");
 }
