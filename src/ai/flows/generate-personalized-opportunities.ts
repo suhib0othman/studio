@@ -1,6 +1,7 @@
 'use server';
 /**
- * @fileOverview This file implements a Genkit flow to generate personalized online income opportunities.
+ * @fileOverview This file implements a hardened Genkit flow to generate personalized online income opportunities.
+ * Hardened with strict system instructions and transparent error handling.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -55,13 +56,17 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
   config: {
-    temperature: 0.7,
-    topP: 0.95,
+    temperature: 0.4, // Reduced for higher schema compliance
+    topP: 0.9,
   },
-  system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي. 
-يجب أن تلتزم تماماً بالهيكل المطلوب (JSON Schema). 
-يجب أن تكون جميع النصوص العربية احترافية، ملهمة، ودقيقة تقنياً.
-تأكد من تقديم 5 فرص متنوعة ومبتكرة تعتمد على الذكاء الاصطناعي.`,
+  system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي.
+مهمتك: توليد تقرير استشاري دقيق بصيغة JSON فقط.
+القواعد الصارمة:
+1. الالتزام التام بـ JSON Schema المعرف.
+2. لا تضف أي نص توضيحي قبل أو بعد الـ JSON.
+3. لا تستخدم علامات الـ Markdown (مثل \`\`\`json).
+4. جميع النصوص يجب أن تكون باللغة العربية الاحترافية.
+5. تأكد من تقديم 5 فرص متنوعة تماماً تعتمد على الذكاء الاصطناعي.`,
   prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً باللغة العربية:
   
 مجال الخبرة: {{{primaryExpertise}}}
@@ -87,11 +92,6 @@ export async function generatePersonalizedOpportunities(
       if (finishReason === 'SAFETY') {
         throw new Error("نعتذر، تم حجب الاستجابة بواسطة فلاتر الأمان (Safety Filters). يرجى محاولة صياغة مهاراتك بشكل مختلف.");
       }
-      if (finishReason === 'RECITATION') {
-        throw new Error("حدث خطأ في حقوق الملكية الفكرية أثناء توليد النتائج. يرجى المحاولة مرة أخرى.");
-      }
-      
-      console.error("❌ [AI Flow Error]: Output is null. Response candidate:", response?.candidates?.[0]);
       throw new Error("فشل محرك الذكاء الاصطناعي في تنسيق النتائج بشكل صحيح. يرجى المحاولة مرة أخرى.");
     }
     
@@ -99,19 +99,12 @@ export async function generatePersonalizedOpportunities(
   } catch (error: any) {
     console.error("❌ [AI Flow Internal Exception]:", error);
     
-    // Transparent error propagation for common API issues
     const errMsg = error.message || "";
-    
-    if (errMsg.includes('401') || errMsg.includes('403')) {
-      throw new Error("خطأ في صلاحيات Gemini: يرجى التحقق من مفتاح API في إعدادات البيئة.");
-    }
-    
     if (errMsg.includes('429')) {
-      throw new Error("لقد تجاوزت حد الاستخدام (Rate Limit). يرجى الانتظار لمدة دقيقة واحدة.");
+      throw new Error("لقد تجاوزت حد الاستخدام المتاح (Rate Limit). يرجى الانتظار دقيقة واحدة.");
     }
-
     if (errMsg.includes('quota')) {
-      throw new Error("تم استهلاك حصة الاستخدام المتاحة لـ Gemini. يرجى المحاولة لاحقاً.");
+      throw new Error("تم استهلاك حصة الاستخدام اليومية. يرجى المحاولة لاحقاً.");
     }
 
     throw new Error(error.message || "حدث خطأ فني أثناء تحليل بياناتك. يرجى التأكد من اتصالك.");

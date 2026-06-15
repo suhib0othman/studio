@@ -132,19 +132,19 @@ export default function AssessmentPage() {
       localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
       router.push("/dashboard");
     } catch (err: any) {
-      console.error("Submission Error Debug:", err);
+      console.error("Submission Error:", err);
       setIsProcessing(false);
       
-      // Extract original message from error or nested objects
-      const errorMessage = typeof err === 'string' ? err : err.message || "فشل توليد التقرير بسبب مشكلة في الاتصال بمحرك الذكاء الاصطناعي.";
+      // Transparent error for debugging
+      const errorMessage = typeof err === 'string' ? err : err.message || "حدث خطأ غير متوقع.";
       
       setErrorInfo({
         message: errorMessage,
         steps: [
-          "تأكد من تفعيل GEMINI_API_KEY في إعدادات البيئة (Settings).",
-          "تحقق من أن استهلاك Gemini لم يتجاوز الحدود المجانية اليومية.",
-          "جرب إعادة تحميل الصفحة والمحاولة مرة أخرى ببيانات مختلفة قليلاً.",
-          "تأكد من استقرار اتصال الإنترنت الخاص بك."
+          "تحقق من اتصال الإنترنت الخاص بك.",
+          "تأكد من عدم حجب Gemini API في بلدك.",
+          "أعد المحاولة بعد قليل؛ قد يكون الضغط مرتفعاً على الخادم.",
+          "إذا استمرت المشكلة، يرجى التواصل مع الدعم الفني."
         ]
       });
     }
@@ -201,7 +201,7 @@ export default function AssessmentPage() {
           </div>
           <div className="space-y-3 bg-white/5 p-6 rounded-2xl border border-white/5">
             <h3 className="font-bold flex items-center gap-2 text-primary text-sm">
-              <ShieldAlert className="w-4 h-4" /> خطوات الحل المقترحة:
+              <ShieldAlert className="w-4 h-4" /> ماذا يمكنك أن تفعل؟
             </h3>
             <ul className="space-y-2">
               {errorInfo.steps.map((step, idx) => (
@@ -213,7 +213,7 @@ export default function AssessmentPage() {
             </ul>
           </div>
           <div className="flex flex-col gap-3">
-            <Button className="w-full h-14 text-lg font-bold gap-3 rounded-2xl cta-button" onClick={() => { setErrorInfo(null); if (Object.keys(answers).length >= QUESTIONS.length) handleSubmit(answers); else handleLogin(); }}>
+            <Button className="w-full h-14 text-lg font-bold gap-3 rounded-2xl cta-button" onClick={() => { setErrorInfo(null); if (Object.keys(answers).length >= QUESTIONS.length) handleSubmit(answers); }}>
               <RefreshCcw className="w-5 h-5" /> إعادة المحاولة
             </Button>
             <Button variant="ghost" className="w-full h-14 rounded-2xl" onClick={() => { setErrorInfo(null); setCurrentStep(0); setAnswers({}); }}>

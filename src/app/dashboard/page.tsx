@@ -42,14 +42,20 @@ export default function DashboardPage() {
   const [localData, setLocalData] = useState<GeneratePersonalizedOpportunitiesOutput | null>(null);
   const [selectedOpp, setSelectedOpp] = useState<GeneratePersonalizedOpportunitiesOutput['opportunities'][0] | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const userResultRef = useMemo(() => user ? doc(db, "results", user.uid) : null, [user, db]);
   const { data: firestoreData, loading: firestoreLoading } = useDoc<any>(userResultRef);
 
   useEffect(() => {
+    setIsMounted(true);
     const saved = localStorage.getItem("ai_assist_pro_result");
     if (saved) {
-      setLocalData(JSON.parse(saved));
+      try {
+        setLocalData(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse local results");
+      }
     } else if (!authLoading && !user) {
       router.push("/assessment");
     }
@@ -59,43 +65,18 @@ export default function DashboardPage() {
 
   const handleCopyPlan = async (plan: string[]) => {
     const text = plan.join("\n");
-    
     try {
-      // Production-grade clipboard handling with fallback for restricted environments
-      if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        setCopySuccess(true);
-        toast({ title: "تم النسخ!", description: "تم نسخ خطة التنفيذ بنجاح." });
-      } else {
-        // Fallback for non-secure contexts or policy blocks
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
-        textArea.style.top = "0";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        
-        if (successful) {
-          setCopySuccess(true);
-          toast({ title: "تم النسخ!", description: "تم النسخ باستخدام النظام البديل." });
-        } else {
-          throw new Error("execCommand copy failed");
-        }
-      }
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(true);
+      toast({ title: "تم النسخ!", description: "تم نسخ خطة التنفيذ بنجاح." });
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
-      console.error("Clipboard Error:", err);
-      toast({ 
-        variant: "destructive", 
-        title: "فشل النسخ", 
-        description: "يرجى نسخ الخطة يدوياً." 
-      });
+      toast({ variant: "destructive", title: "فشل النسخ" });
     }
   };
+
+  // Prevent hydration error
+  if (!isMounted) return null;
 
   if (authLoading || (user && firestoreLoading)) {
     return (
@@ -106,7 +87,12 @@ export default function DashboardPage() {
     );
   }
 
-  if (!data) return null;
+  if (!data) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center" dir="rtl">
+       <h2 className="text-2xl font-bold mb-6">لا توجد نتائج لعرضها</h2>
+       <Button onClick={() => router.push("/assessment")}>ابدأ التقييم الآن</Button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen pt-24 pb-12" dir="rtl">
@@ -122,7 +108,7 @@ export default function DashboardPage() {
                   <circle
                     cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent"
                     strokeDasharray={552.92}
-                    strokeDashoffset={552.92 - (552.92 * data.aiWealthScore) / 100}
+                    strokeDashoffset={552.92 - (552.92 * (data.aiWealthScore || 0)) / 100}
                     className="text-primary transition-all duration-1000 ease-out"
                     strokeLinecap="round"
                   />
@@ -171,9 +157,14 @@ export default function DashboardPage() {
         </div>
 
         <div className="mb-16">
-          <h2 className="text-3xl font-bold mb-8">أفضل 5 فرص استثمارية</h2>
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold">أفضل 5 فرص استثمارية</h2>
+            <Button onClick={() => router.push("/share")} variant="outline" className="gap-2 border-primary/30">
+              <Share2 className="w-4 h-4" /> مشاركة النتائج
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.opportunities.map((opp, i) => (
+            {data.opportunities?.map((opp, i) => (
               <Card key={i} className="glass-card group border-white/5 flex flex-col hover:border-primary/50 transition-all duration-300">
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start mb-2">
