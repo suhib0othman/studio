@@ -99,7 +99,8 @@ export default function AssessmentPage() {
       toast({ title: "تم الربط بنجاح", description: "سيتم حفظ نتائجك تلقائياً الآن." });
       setErrorInfo(null);
     } catch (err: any) {
-      console.error("Auth Failure:", err.code);
+      if (err.code === 'auth/popup-closed-by-user') return;
+      
       const friendlyError = getFriendlyAuthErrorMessage(err.code);
       setErrorInfo(friendlyError);
     }
@@ -128,13 +129,12 @@ export default function AssessmentPage() {
           ...result,
           userId: user.uid,
           createdAt: serverTimestamp(),
-        }, { merge: true }).catch((err) => console.warn("Firestore sync deferred:", err));
+        }, { merge: true }).catch(() => {});
       }
       
       localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
       router.push("/dashboard");
     } catch (err: any) {
-      console.error("AI Generation Error:", err);
       setIsProcessing(false);
       setErrorInfo({
         message: "حدث خطأ في توليد التقرير الاستشاري",

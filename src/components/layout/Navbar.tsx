@@ -30,9 +30,12 @@ export function Navbar() {
       await signInWithPopup(auth, provider);
       toast({ title: "مرحباً بك", description: "تم تسجيل دخولك بنجاح." });
     } catch (error: any) {
-      // Enhanced error logging for debugging API key issues
-      console.error("❌ [Auth Error]:", error.code, error.message);
-      
+      // Don't show destructive toast for user-initiated cancellation
+      if (error.code === 'auth/popup-closed-by-user') {
+        setIsLoggingIn(false);
+        return;
+      }
+
       const friendly = getFriendlyAuthErrorMessage(error.code);
       toast({ 
         variant: "destructive", 
@@ -49,7 +52,7 @@ export function Navbar() {
       await signOut(auth);
       toast({ title: "تم تسجيل الخروج", description: "نأمل رؤيتك قريباً." });
     } catch (err) {
-      console.error("Logout Error:", err);
+      // Silently fail logout
     }
   }, [auth, toast]);
 
