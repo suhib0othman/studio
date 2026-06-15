@@ -85,19 +85,17 @@ const generateOpportunitiesPrompt = ai.definePrompt({
  * Helper to map Gemini errors to Arabic user-friendly messages.
  */
 function handleGeminiError(error: any): string {
-  // If it's a validation error from Genkit/Zod
-  if (error.name === 'ZodError' || error.message?.includes('validation')) {
-    console.error("Schema Validation Failed:", JSON.stringify(error, null, 2));
-    return "حدث خطأ في معالجة البيانات من قبل الذكاء الاصطناعي. يرجى المحاولة مرة أخرى بصياغة مختلفة قليلاً.";
+  const msg = error?.message || "";
+  const status = error?.status || error?.code;
+  
+  // Safe check for safety blocks
+  if (msg.includes('blocked') || (error && typeof error === 'object' && error.finishReason === 'blocked')) {
+    return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
   }
-
-  const status = error.status || error.code || (error.details && error.details.status);
-  const msg = error.message || "";
 
   if (status === 429 || msg.includes('429')) return "تم تجاوز حد الطلبات المسموح به (Rate Limit). يرجى الانتظار دقيقة والمحاولة مجدداً.";
   if (status === 404 || msg.includes('404')) return "نموذج الذكاء الاصطناعي غير متوفر حالياً في منطقتك.";
   if (status === 500 || status === 503) return "خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً. حاول مجدداً بعد قليل.";
-  if (msg.includes('blocked') || error.finishReason === 'blocked') return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك لتكون أكثر وضوحاً.";
   
   return "حدث خطأ غير متوقع أثناء توليد التقرير. يرجى المحاولة مرة أخرى.";
 }
@@ -111,6 +109,7 @@ export async function generatePersonalizedOpportunities(
     try {
       const result = await generateOpportunitiesPrompt(input);
       
+      // Genkit 1.x uses finishReason directly on the result
       if (result.finishReason === 'blocked') {
         throw new Error("blocked");
       }
@@ -121,9 +120,10 @@ export async function generatePersonalizedOpportunities(
       
       return result.output;
     } catch (error: any) {
-      console.error(`--- [AI ATTEMPT ${attempt + 1}] ---`, error.message);
+      console.error(`--- [AI ATTEMPT ${attempt + 1}] ---`, error?.message);
       
-      const isRetryable = error.message?.includes('429') || error.status === 429 || error.message === 'EMPTY_OUTPUT';
+      // Handle retryable errors (Rate limits or transient empty outputs)
+      const isRetryable = error?.message?.includes('429') || error?.status === 429 || error?.message === 'EMPTY_OUTPUT';
       
       if (isRetryable && attempt < maxRetries) {
         const delay = Math.pow(2, attempt) * 1500;
@@ -131,8 +131,7 @@ export async function generatePersonalizedOpportunities(
         continue;
       }
 
-      // Instead of throwing a raw object (which Next.js might fail to serialize, causing 500), 
-      // we throw a standard Error with a string message.
+      // Convert technical error to user-friendly Arabic message
       throw new Error(handleGeminiError(error));
     }
   }

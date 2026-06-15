@@ -29,7 +29,8 @@ const generateShareCardContentPrompt = ai.definePrompt({
   input: { schema: GenerateShareCardContentInputSchema },
   output: { schema: GenerateShareCardContentOutputSchema },
   config: { temperature: 0.4 },
-  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". أنشئ محتوى بطاقة مشاركة بصيغة JSON فقط.`,
+  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". مهمتك تحويل بيانات نجاح المستخدم إلى محتوى بطاقة مشاركة ملهمة.
+أجب بصيغة JSON فقط.`,
   prompt: `قم بتحويل بيانات المستخدم التالية إلى محتوى بطاقة مشاركة ملهم:
 مؤشر الثراء: {{{aiWealthScore}}}
 الملخص: {{{profileSummary}}}
@@ -49,12 +50,19 @@ export async function generateShareCardContent(
     try {
       const result = await generateShareCardContentPrompt(input);
       
-      if (result.finishReason === 'blocked') throw new Error("blocked");
-      if (!result.output) throw new Error("EMPTY_OUTPUT");
+      if (result.finishReason === 'blocked') {
+        throw new Error("blocked");
+      }
+
+      if (!result.output) {
+        throw new Error("EMPTY_OUTPUT");
+      }
       
       return result.output;
     } catch (error: any) {
-      if ((error.status === 429 || error.message?.includes('429')) && attempt < maxRetries) {
+      console.error(`--- [SHARE CARD ATTEMPT ${attempt + 1}] ---`, error?.message);
+      
+      if ((error?.status === 429 || error?.message?.includes('429')) && attempt < maxRetries) {
         await new Promise(res => setTimeout(res, Math.pow(2, attempt) * 1000));
         continue;
       }
