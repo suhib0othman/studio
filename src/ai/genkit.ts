@@ -20,10 +20,11 @@ export const ai = genkit({
 
 /**
  * Model reference for Google AI.
- * The identifier 'googleai/gemini-1.5-flash' is the standard for Genkit 1.x Google AI plugin.
+ * Migrated to gemini-2.0-flash for enhanced performance and availability.
+ * The identifier 'googleai/gemini-2.0-flash' is supported by @genkit-ai/google-genai v1.28.0+.
  */
-export const geminiModel = 'googleai/gemini-1.5-flash';
+export const geminiModel = 'googleai/gemini-2.0-flash';
 
 if (typeof window === 'undefined') {
-  console.log("🤖 [Genkit Engine] Initialized securely with Google AI plugin.");
+  console.log("🤖 [Genkit Engine] Initialized securely with Gemini 2.0 Flash.");
 }
