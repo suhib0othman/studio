@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview This file implements a Genkit flow to generate personalized share card content.
- * Includes diagnostic logging for API errors.
+ * Includes exponential backoff retry logic for 429 errors.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -53,21 +53,31 @@ const generateShareCardContentPrompt = ai.definePrompt({
 export async function generateShareCardContent(
   input: GenerateShareCardContentInput
 ): Promise<GenerateShareCardContentOutput> {
-  try {
-    const { output } = await generateShareCardContentPrompt(input);
-    if (!output) throw new Error('AI returned no output for the share card.');
-    return output;
-  } catch (error: any) {
-    console.error("❌ [SHARE CARD FLOW ERROR]:", error.message);
-    
-    if (error.details) {
-      console.error("-> Raw details:", JSON.stringify(error.details, null, 2));
+  const maxRetries = 3;
+  let lastError: any;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const { output } = await generateShareCardContentPrompt(input);
+      if (!output) throw new Error('AI returned no output for the share card.');
+      return output;
+    } catch (error: any) {
+      lastError = error;
+      const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
+      
+      if (is429 && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 2000;
+        console.warn(`⚠️ [Share Card Retry]: Attempt ${attempt + 1} failed with 429. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      console.error(`❌ [SHARE CARD FLOW ERROR] (Attempt ${attempt + 1}):`, error.message);
+      if (is429) {
+        throw new Error("تم تجاوز حد الطلبات. يرجى المحاولة بعد قليل.");
+      }
+      throw new Error(error.message || "فشل توليد محتوى بطاقة المشاركة.");
     }
-    
-    if (error.message?.includes('429')) {
-      throw new Error("تم تجاوز حد الطلبات. يرجى المحاولة بعد قليل.");
-    }
-    
-    throw new Error(error.message || "فشل توليد محتوى بطاقة المشاركة.");
   }
+  throw lastError;
 }

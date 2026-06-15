@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
- * Includes deep diagnostic logging for API errors.
+ * Includes exponential backoff retry logic for 429 errors.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -84,38 +84,41 @@ const generateOpportunitiesPrompt = ai.definePrompt({
 export async function generatePersonalizedOpportunities(
   input: GeneratePersonalizedOpportunitiesInput
 ): Promise<GeneratePersonalizedOpportunitiesOutput> {
-  try {
-    const { output, response } = await generateOpportunitiesPrompt(input);
-    
-    if (!output) {
-      const reason = response?.candidates?.[0]?.finishReason;
-      console.warn("⚠️ [AI Parsing Warning]: No structured output returned. Finish Reason:", reason);
-      
-      if (reason === 'SAFETY') throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل بعض الكلمات في مدخلاتك.");
-      throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج بالهيكل المطلوب. يرجى المحاولة مرة أخرى.");
-    }
-    
-    return output;
-  } catch (error: any) {
-    // --- DEEP DIAGNOSTIC LOGGING ---
-    console.error("❌ [AI FLOW CRITICAL ERROR]:");
-    console.error("-> Message:", error.message);
-    
-    if (error.details) {
-      console.error("-> Raw API Details:", JSON.stringify(error.details, null, 2));
-    }
-    
-    const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
-    
-    if (is429) {
-      console.error("-> Analysis: Quota or Rate Limit hit. Check Gemini Dashboard.");
-      throw new Error("تم تجاوز حد الطلبات المسموح به (429). يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");
-    }
-    
-    if (error.message?.includes('404')) {
-      throw new Error("حدث خطأ في الاتصال بنموذج الذكاء الاصطناعي (Model Not Found). يرجى التحقق من إعدادات المفتاح.");
-    }
+  const maxRetries = 3;
+  let lastError: any;
 
-    throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير.");
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const { output, response } = await generateOpportunitiesPrompt(input);
+      
+      if (!output) {
+        const reason = response?.candidates?.[0]?.finishReason;
+        if (reason === 'SAFETY') throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل بعض الكلمات في مدخلاتك.");
+        throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج بالهيكل المطلوب.");
+      }
+      
+      return output;
+    } catch (error: any) {
+      lastError = error;
+      const is429 = error.message?.includes('429') || (error.details && JSON.stringify(error.details).includes('429'));
+      
+      if (is429 && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 2000;
+        console.warn(`⚠️ [AI Retry]: Attempt ${attempt + 1} failed with 429. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // Final failure handling
+      console.error(`❌ [AI FLOW ERROR] (Attempt ${attempt + 1}):`, error.message);
+      if (error.details) console.error("-> Raw Details:", JSON.stringify(error.details, null, 2));
+
+      if (is429) {
+        throw new Error("تم تجاوز حد الطلبات المسموح به. يرجى الانتظار لمدة دقيقة واحدة ثم إعادة المحاولة.");
+      }
+      
+      throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير.");
+    }
   }
+  throw lastError;
 }
