@@ -1,0 +1,10 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Abstract futuristic AI concept",
+      "imageUrl": "https://picsum.photos/seed/aistudio1/1200/800",
+      "imageHint": "artificial intelligence abstract"
+    }
+  ]
+}

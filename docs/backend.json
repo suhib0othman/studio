@@ -1,0 +1,73 @@
+
+{
+  "entities": {
+    "UserResult": {
+      "title": "UserResult",
+      "description": "The AI-generated assessment report for a user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "aiWealthScore": { "type": "number" },
+        "achievementBadge": { "type": "string" },
+        "profileSummary": { "type": "string" },
+        "personalityType": { "type": "string" },
+        "growthPotential": { "type": "string" },
+        "bestBusinessModel": { "type": "string" },
+        "bestMonetizationMethod": { "type": "string" },
+        "opportunities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/backend/entities/Opportunity"
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "aiWealthScore", "opportunities"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "compatibilityScore": { "type": "number" },
+        "monthlyIncomePotential": { "type": "string" },
+        "difficultyLevel": { "type": "string" },
+        "startupCost": { "type": "string" },
+        "timeToFirstIncome": { "type": "string" },
+        "requiredSkills": { "type": "array", "items": { "type": "string" } },
+        "recommendedAiTools": { "type": "array", "items": { "type": "string" } },
+        "shortExplanation": { "type": "string" },
+        "whyThisFitsYou": { "type": "string" },
+        "stepByStepExecutionPlan": { "type": "array", "items": { "type": "string" } },
+        "commonMistakes": { "type": "array", "items": { "type": "string" } },
+        "successTips": { "type": "array", "items": { "type": "string" } },
+        "expectedTimeline": { "type": "string" }
+      }
+    },
+    "ReferralTrack": {
+      "title": "ReferralTrack",
+      "description": "Tracking for user referrals and unlocked milestones.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "referralCode": { "type": "string" },
+        "referralCount": { "type": "number" },
+        "referredUserIds": { "type": "array", "items": { "type": "string" } },
+        "unlockedFeatures": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/results/{userId}": {
+      "schema": "UserResult",
+      "description": "Stores the latest assessment result for a user."
+    },
+    "/referrals/{referralCode}": {
+      "schema": "ReferralTrack",
+      "description": "Maps unique referral codes to user tracking data."
+    }
+  }
+}
