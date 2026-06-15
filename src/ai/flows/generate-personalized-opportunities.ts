@@ -1,53 +1,53 @@
 'use server';
 /**
- * @fileOverview This file implements a hardened Genkit flow to generate personalized online income opportunities.
- * Hardened with strict system instructions for schema compliance and transparent error handling.
+ * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
 import { z } from 'genkit';
 
 const GeneratePersonalizedOpportunitiesInputSchema = z.object({
-  primaryExpertise: z.string().describe('User\'s primary expertise or passion.'),
-  availableHoursPerWeek: z.string().describe('Weekly time commitment available.'),
-  incomeGoal: z.string().describe('Monthly income goal.'),
-  availableBudget: z.string().describe('Available startup capital.'),
-  experienceLevel: z.string().describe('Online work experience level.'),
-  workPreference: z.string().describe('Preferred work style (Solo/Team).'),
-  preferredActivity: z.string().describe('Preferred type of activity.'),
-  greatestStrength: z.string().describe('User\'s greatest strength.'),
-  riskTolerance: z.string().describe('Risk tolerance level.'),
-  primaryGoal: z.string().describe('Primary current goal.'),
+  primaryExpertise: z.string(),
+  availableHoursPerWeek: z.string(),
+  incomeGoal: z.string(),
+  availableBudget: z.string(),
+  experienceLevel: z.string(),
+  workPreference: z.string(),
+  preferredActivity: z.string(),
+  greatestStrength: z.string(),
+  riskTolerance: z.string(),
+  primaryGoal: z.string(),
 });
-export type GeneratePersonalizedOpportunitiesInput = z.infer<typeof GeneratePersonalizedOpportunitiesInputSchema>;
 
 const OpportunitySchema = z.object({
-  name: z.string().describe('Name of the income opportunity in Arabic.'),
-  compatibilityScore: z.number().int().min(0).max(100).describe('Compatibility score from 0-100.'),
-  monthlyIncomePotential: z.string().describe('Estimated monthly earning potential in Arabic.'),
-  difficultyLevel: z.string().describe('Difficulty level in Arabic.'),
-  startupCost: z.string().describe('Estimated startup cost in Arabic.'),
-  timeToFirstIncome: z.string().describe('Estimated time to first income in Arabic.'),
-  requiredSkills: z.array(z.string()).describe('List of skills required in Arabic.'),
-  recommendedAiTools: z.array(z.string()).describe('List of recommended AI tools.'),
-  shortExplanation: z.string().describe('A brief explanation of the opportunity in Arabic.'),
-  whyThisFitsYou: z.string().describe('Detailed explanation of why this fits the user in Arabic.'),
-  stepByStepExecutionPlan: z.array(z.string()).describe('Actionable step-by-step plan in Arabic.'),
-  commonMistakes: z.array(z.string()).describe('Common mistakes to avoid in Arabic.'),
-  successTips: z.array(z.string()).describe('Expert success tips in Arabic.'),
-  expectedTimeline: z.string().describe('Estimated timeline for milestones in Arabic.'),
+  name: z.string().describe('Opportunity name in Arabic'),
+  compatibilityScore: z.number().int().min(0).max(100),
+  monthlyIncomePotential: z.string(),
+  difficultyLevel: z.string(),
+  startupCost: z.string(),
+  timeToFirstIncome: z.string(),
+  requiredSkills: z.array(z.string()),
+  recommendedAiTools: z.array(z.string()),
+  shortExplanation: z.string(),
+  whyThisFitsYou: z.string(),
+  stepByStepExecutionPlan: z.array(z.string()),
+  commonMistakes: z.array(z.string()),
+  successTips: z.array(z.string()),
+  expectedTimeline: z.string(),
 });
 
 const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
-  aiWealthScore: z.number().int().min(0).max(100).describe('Overall potential score.'),
-  achievementBadge: z.string().describe('Personalized achievement badge in Arabic.'),
-  profileSummary: z.string().describe('Concise personalized profile summary in Arabic.'),
-  personalityType: z.string().describe('Identified personality type in Arabic.'),
-  growthPotential: z.string().describe('Description of growth potential in Arabic.'),
-  bestBusinessModel: z.string().describe('Recommended business model in Arabic.'),
-  bestMonetizationMethod: z.string().describe('Recommended monetization method in Arabic.'),
-  opportunities: z.array(OpportunitySchema).length(5).describe('Top 5 most suitable opportunities.'),
+  aiWealthScore: z.number().int().min(0).max(100),
+  achievementBadge: z.string(),
+  profileSummary: z.string(),
+  personalityType: z.string(),
+  growthPotential: z.string(),
+  bestBusinessModel: z.string(),
+  bestMonetizationMethod: z.string(),
+  opportunities: z.array(OpportunitySchema).length(5),
 });
+
+export type GeneratePersonalizedOpportunitiesInput = z.infer<typeof GeneratePersonalizedOpportunitiesInputSchema>;
 export type GeneratePersonalizedOpportunitiesOutput = z.infer<typeof GeneratePersonalizedOpportunitiesOutputSchema>;
 
 const generateOpportunitiesPrompt = ai.definePrompt({
@@ -56,31 +56,28 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
   config: {
-    temperature: 0.2, // Lower temperature for stricter schema compliance
-    topP: 0.8,
+    temperature: 0.15, // Low temperature for maximum schema compliance
+    topP: 0.7,
   },
-  system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي.
-مهمتك: توليد تقرير استشاري دقيق بصيغة JSON فقط.
+  system: `أنت خبير استراتيجي في الأعمال والذكاء الاصطناعي.
+مهمتك: توليد تقرير JSON متوافق تماماً مع الهيكل المطلوب.
 
-قواعد صارمة جداً للالتزام بالهيكل (Schema Compliance):
-1. الالتزام التام بـ JSON Schema المعرف. لا تحيد عنه أبداً.
-2. لا تضف أي نص توضيحي، ترحيب، أو علامات Markdown مثل \`\`\`json.
-3. الإجابة يجب أن تبدأ بـ { وتنتهي بـ }.
-4. جميع النصوص يجب أن تكون باللغة العربية الاحترافية الراقية.
-5. تأكد من تقديم 5 فرص متنوعة تماماً تعتمد على قوة الذكاء الاصطناعي الحالية.
-6. إذا تعذر إنتاج JSON صالح، لا تحاول تخمين النتيجة بل اتبع القواعد.`,
-  prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً باللغة العربية:
-  
-مجال الخبرة: {{{primaryExpertise}}}
-الوقت المتاح: {{{availableHoursPerWeek}}}
+قواعد صارمة:
+1. الرد يجب أن يكون JSON فقط. لا تضف أي نص توضيحي أو علامات Markdown.
+2. جميع القيم النصية يجب أن تكون باللغة العربية الاحترافية.
+3. تأكد من تقديم 5 فرص متنوعة بدقة.
+4. ابدأ الرد بـ { وانتهِ بـ }.`,
+  prompt: `حلل البيانات التالية وقدم تقريراً استشارياً:
+خبرة المستخدم: {{{primaryExpertise}}}
+الوقت: {{{availableHoursPerWeek}}}
 الهدف المالي: {{{incomeGoal}}}
-رأس المال: {{{availableBudget}}}
-مستوى الخبرة: {{{experienceLevel}}}
-أسلوب العمل: {{{workPreference}}}
-نوع الأنشطة المفضلة: {{{preferredActivity}}}
-نقطة القوة الكبرى: {{{greatestStrength}}}
-مستوى المخاطرة: {{{riskTolerance}}}
-الهدف الأساسي: {{{primaryGoal}}}`,
+الميزانية: {{{availableBudget}}}
+المستوى: {{{experienceLevel}}}
+النمط: {{{workPreference}}}
+النشاط المفضل: {{{preferredActivity}}}
+القوة: {{{greatestStrength}}}
+المخاطرة: {{{riskTolerance}}}
+الهدف: {{{primaryGoal}}}`,
 });
 
 export async function generatePersonalizedOpportunities(
@@ -90,31 +87,15 @@ export async function generatePersonalizedOpportunities(
     const { output, response } = await generateOpportunitiesPrompt(input);
     
     if (!output) {
-      const finishReason = response?.candidates?.[0]?.finishReason;
-      if (finishReason === 'SAFETY') {
-        throw new Error("نعتذر، تم حجب الاستجابة بواسطة فلاتر الأمان الخاصة بـ Gemini. يرجى تجنب استخدام كلمات قد تعتبر حساسة ومحاولة إعادة الصياغة.");
-      }
-      if (finishReason === 'MAX_TOKENS') {
-        throw new Error("الاستجابة كانت طويلة جداً وتم قطعها. يرجى المحاولة مرة أخرى.");
-      }
-      throw new Error("فشل محرك الذكاء الاصطناعي في تنسيق النتائج بشكل صحيح (JSON Parsing Error). يرجى المحاولة مرة أخرى.");
+      const reason = response?.candidates?.[0]?.finishReason;
+      if (reason === 'SAFETY') throw new Error("تم حجب المحتوى لدواعي الأمان. يرجى تعديل مدخلاتك.");
+      throw new Error("فشل الذكاء الاصطناعي في تنسيق النتائج. يرجى المحاولة مرة أخرى.");
     }
     
     return output;
   } catch (error: any) {
-    console.error("❌ [AI Flow Internal Exception]:", error);
-    
-    const errMsg = error.message || "";
-    if (errMsg.includes('429')) {
-      throw new Error("لقد تجاوزت حد الاستخدام المتاح (Rate Limit). يرجى الانتظار دقيقة واحدة قبل إعادة المحاولة.");
-    }
-    if (errMsg.includes('quota')) {
-      throw new Error("تم استهلاك حصة الاستخدام اليومية المخصصة. يرجى المحاولة في وقت لاحق.");
-    }
-    if (errMsg.includes('401') || errMsg.includes('403')) {
-      throw new Error("خطأ في صلاحيات المفتاح (API Key Error). يرجى التحقق من إعدادات الخادم.");
-    }
-
-    throw new Error(error.message || "حدث خطأ فني غير متوقع أثناء تحليل بياناتك. يرجى التأكد من اتصالك بالإنترنت.");
+    console.error("AI Flow Error:", error);
+    if (error.message?.includes('429')) throw new Error("تم تجاوز حد الطلبات (Rate Limit). يرجى الانتظار دقيقة.");
+    throw new Error(error.message || "حدث خطأ غير متوقع أثناء توليد التقرير.");
   }
 }

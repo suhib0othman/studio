@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Share2, 
   Star, 
-  Trophy, 
   TrendingUp, 
-  Clock, 
   Zap, 
   CircleDollarSign,
   BarChart4,
@@ -40,7 +38,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
   
   const [localData, setLocalData] = useState<GeneratePersonalizedOpportunitiesOutput | null>(null);
-  const [selectedOpp, setSelectedOpp] = useState<GeneratePersonalizedOpportunitiesOutput['opportunities'][0] | null>(null);
+  const [selectedOpp, setSelectedOpp] = useState<any | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -49,7 +47,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Defer localStorage access to useEffect to prevent hydration mismatch
     const saved = localStorage.getItem("ai_assist_pro_result");
     if (saved) {
       try {
@@ -61,7 +58,6 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Auth-based redirection after mount and data check
     if (isMounted && !authLoading && !user && !localData && !firestoreData && !firestoreLoading) {
       router.push("/assessment");
     }
@@ -70,37 +66,28 @@ export default function DashboardPage() {
   const data = firestoreData || localData;
 
   const handleCopyPlan = async (plan: string[]) => {
-    const text = plan.join("\n");
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(plan.join("\n"));
       setCopySuccess(true);
-      toast({ title: "تم النسخ!", description: "تم نسخ خطة التنفيذ بنجاح." });
+      toast({ title: "تم النسخ!", description: "تم نسخ خطة التنفيذ." });
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
       toast({ variant: "destructive", title: "فشل النسخ" });
     }
   };
 
-  // Prevent hydration error by not rendering until mounted
-  if (!isMounted) {
+  if (!isMounted) return null;
+
+  if (authLoading || (user && firestoreLoading)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background" dir="rtl">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </div>
     );
   }
 
-  if (authLoading || (user && firestoreLoading)) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background" dir="rtl">
-        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-        <p className="text-primary font-bold text-xl">جاري تحميل تقريرك الاستشاري...</p>
-      </div>
-    );
-  }
-
   if (!data) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center" dir="rtl">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
        <h2 className="text-2xl font-bold mb-6">لا توجد نتائج لعرضها</h2>
        <Button onClick={() => router.push("/assessment")}>ابدأ التقييم الآن</Button>
     </div>
@@ -109,10 +96,10 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen pt-24 pb-12" dir="rtl">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4">
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-          <Card className="lg:col-span-4 glass-card overflow-hidden relative border-white/5">
+          <Card className="lg:col-span-4 glass-card">
             <CardContent className="p-8 text-center flex flex-col items-center">
               <div className="relative w-48 h-48 flex items-center justify-center mb-6">
                 <svg className="w-full h-full rotate-90 scale-x-[-1]">
@@ -127,30 +114,26 @@ export default function DashboardPage() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-5xl font-bold">{data.aiWealthScore}</span>
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">مؤشر النجاح</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase mt-1">مؤشر النجاح</span>
                 </div>
               </div>
               <Badge className="bg-primary/20 text-primary px-6 py-2 text-md mb-4 font-bold">
                 {data.achievementBadge}
               </Badge>
-              <p className="text-sm text-muted-foreground leading-relaxed px-4">
-                احتمالية نجاحك بناءً على تحليل السوق الحالي.
-              </p>
+              <p className="text-sm text-muted-foreground px-4">احتمالية نجاحك بناءً على تحليل السوق.</p>
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-8 glass-card border-white/5">
+          <Card className="lg:col-span-8 glass-card">
             <CardContent className="p-8">
               <div className="flex items-center gap-3 mb-6">
                 <LayoutDashboard className="w-6 h-6 text-accent" />
                 <h2 className="text-3xl font-bold">تحليل خبير الأعمال</h2>
               </div>
-              <p className="text-xl text-foreground/90 leading-relaxed mb-8 font-medium">
-                {data.profileSummary}
-              </p>
+              <p className="text-xl leading-relaxed mb-8 font-medium">{data.profileSummary}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-5 rounded-2xl bg-white/5 border border-white/5 flex items-start gap-4">
-                  <CheckCircle2 className="w-6 h-6 text-success shrink-0" />
+                  <CheckCircle2 className="w-6 h-6 text-primary shrink-0" />
                   <div>
                     <h4 className="font-bold text-md mb-1">الميزة التنافسية</h4>
                     <p className="text-sm text-muted-foreground">خلفيتك تمنحك أفضلية فريدة.</p>
@@ -171,21 +154,21 @@ export default function DashboardPage() {
         <div className="mb-16">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl font-bold">أفضل 5 فرص استثمارية</h2>
-            <Button onClick={() => router.push("/share")} variant="outline" className="gap-2 border-primary/30">
+            <Button onClick={() => router.push("/share")} variant="outline" className="gap-2">
               <Share2 className="w-4 h-4" /> مشاركة النتائج
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.opportunities?.map((opp, i) => (
-              <Card key={i} className="glass-card group border-white/5 flex flex-col hover:border-primary/50 transition-all duration-300">
+              <Card key={i} className="glass-card group hover:border-primary/50 transition-all">
                 <CardHeader className="pb-4">
                   <div className="flex justify-between items-start mb-2">
                     <Badge variant="outline" className="text-[10px]">توافق: {opp.compatibilityScore}%</Badge>
                     <Star className="w-4 h-4 text-primary fill-primary" />
                   </div>
-                  <CardTitle className="text-2xl group-hover:text-primary transition-colors">{opp.name}</CardTitle>
+                  <CardTitle className="text-2xl group-hover:text-primary">{opp.name}</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1">
+                <CardContent>
                   <div className="space-y-4 mb-8">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1.5"><CircleDollarSign className="w-4 h-4" /> الدخل المحتمل</span>
@@ -196,7 +179,7 @@ export default function DashboardPage() {
                       <Badge variant="secondary" className="font-bold">{opp.difficultyLevel}</Badge>
                     </div>
                   </div>
-                  <Button className="w-full bg-white/5 hover:bg-primary" onClick={() => setSelectedOpp(opp)}>
+                  <Button className="w-full" onClick={() => setSelectedOpp(opp)}>
                     عرض الخطة الكاملة
                     <ChevronLeft className="w-4 h-4 mr-2" />
                   </Button>
@@ -207,13 +190,13 @@ export default function DashboardPage() {
         </div>
 
         <Dialog open={!!selectedOpp} onOpenChange={() => setSelectedOpp(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto glass-card border-white/10 p-0 text-right" dir="rtl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0" dir="rtl">
             {selectedOpp && (
               <div className="relative">
                 <div className="h-48 bg-gradient-to-l from-primary/30 to-secondary/30 flex items-center px-12">
                    <div className="z-10">
                     <Badge className="bg-primary/20 text-primary mb-2 font-bold">فرصة عالية التوافق</Badge>
-                    <DialogTitle className="text-4xl font-bold text-foreground">{selectedOpp.name}</DialogTitle>
+                    <DialogTitle className="text-4xl font-bold">{selectedOpp.name}</DialogTitle>
                     <DialogDescription className="text-white/60">تفاصيل الخطة التنفيذية.</DialogDescription>
                    </div>
                 </div>
@@ -225,7 +208,7 @@ export default function DashboardPage() {
                     </div>
                     <p className="text-muted-foreground leading-relaxed text-lg">{selectedOpp.whyThisFitsYou}</p>
                   </section>
-                  <section className="bg-white/5 rounded-3xl p-8 border border-white/5">
+                  <section className="bg-white/5 rounded-3xl p-8">
                     <div className="flex items-center justify-between mb-8">
                        <h3 className="text-2xl font-bold">خطة التنفيذ خطوة بخطوة</h3>
                        <Button size="sm" variant="ghost" onClick={() => handleCopyPlan(selectedOpp.stepByStepExecutionPlan)}>
@@ -233,7 +216,7 @@ export default function DashboardPage() {
                        </Button>
                     </div>
                     <div className="space-y-6">
-                      {selectedOpp.stepByStepExecutionPlan.map((step, i) => (
+                      {selectedOpp.stepByStepExecutionPlan.map((step: string, i: number) => (
                         <div key={i} className="flex gap-4 items-start">
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-primary font-bold">{i + 1}</div>
                           <p className="text-muted-foreground text-lg flex-1">{step}</p>

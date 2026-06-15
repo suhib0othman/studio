@@ -1,8 +1,15 @@
 /**
- * @fileOverview Firebase configuration and validation.
- * Ensures that environment variables are correctly loaded and provides 
- * helpful warnings for developers if configuration is missing.
+ * @fileOverview Firebase configuration and strict runtime validation.
  */
+
+const requiredKeys = [
+  'NEXT_PUBLIC_FIREBASE_API_KEY',
+  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
+  'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+  'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
+  'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+  'NEXT_PUBLIC_FIREBASE_APP_ID'
+] as const;
 
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,16 +20,13 @@ export const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Runtime validation for environment variables
+// Strict Validation for Production Readiness
 if (typeof window !== 'undefined') {
-  const missingKeys = Object.entries(firebaseConfig)
-    .filter(([_, value]) => !value)
-    .map(([key]) => key);
-
-  if (missingKeys.length > 0) {
-    console.warn(
-      `⚠️ [Firebase Config]: Missing environment variables: ${missingKeys.join(', ')}. ` +
-      `Check your .env.local file and ensure variables start with NEXT_PUBLIC_.`
+  const missing = requiredKeys.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(
+      `🚨 [Firebase Critical]: Missing environment variables: ${missing.join(', ')}. ` +
+      `Ensure your .env file is correctly configured for the current environment.`
     );
   }
 }
