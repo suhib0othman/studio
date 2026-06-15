@@ -190,14 +190,14 @@ export default function DashboardPage() {
         </div>
 
         <Dialog open={!!selectedOpp} onOpenChange={() => setSelectedOpp(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 text-right border-none">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 text-right border-none shadow-2xl">
             {selectedOpp && (
               <div className="relative">
                 <div className="h-48 bg-gradient-to-l from-primary/30 to-secondary/30 flex items-center px-12">
                    <div className="z-10">
-                    <Badge className="bg-primary/20 text-primary mb-2 font-bold">فرصة عالية التوافق</Badge>
+                    <Badge className="bg-primary/20 text-primary mb-2 font-bold uppercase tracking-wider">فرصة عالية التوافق</Badge>
                     <DialogTitle className="text-4xl font-bold">{selectedOpp.name}</DialogTitle>
-                    <DialogDescription className="text-white/60">تفاصيل الخطة التنفيذية.</DialogDescription>
+                    <DialogDescription className="text-white/60">تفاصيل الخطة التنفيذية الكاملة.</DialogDescription>
                    </div>
                 </div>
                 <div className="p-10 space-y-12">
@@ -208,7 +208,7 @@ export default function DashboardPage() {
                     </div>
                     <p className="text-muted-foreground leading-relaxed text-lg">{selectedOpp.whyThisFitsYou}</p>
                   </section>
-                  <section className="bg-white/5 rounded-3xl p-8">
+                  <section className="bg-white/5 rounded-3xl p-8 border border-white/5">
                     <div className="flex items-center justify-between mb-8 flex-row-reverse">
                        <h3 className="text-2xl font-bold">خطة التنفيذ خطوة بخطوة</h3>
                        <Button size="sm" variant="ghost" onClick={() => handleCopyPlan(selectedOpp.stepByStepExecutionPlan)}>
@@ -218,8 +218,8 @@ export default function DashboardPage() {
                     <div className="space-y-6">
                       {selectedOpp.stepByStepExecutionPlan.map((step: string, i: number) => (
                         <div key={i} className="flex gap-4 items-start flex-row-reverse">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-primary font-bold">{i + 1}</div>
-                          <p className="text-muted-foreground text-lg flex-1">{step}</p>
+                          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-primary font-bold text-sm">{i + 1}</div>
+                          <p className="text-muted-foreground text-lg flex-1 leading-relaxed">{step}</p>
                         </div>
                       ))}
                     </div>

@@ -84,7 +84,7 @@ export function Navbar() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 glass-card border-white/10 p-2 mt-2">
+              <DropdownMenuContent align="end" className="w-56 glass-card border-white/10 p-2 mt-2 shadow-2xl">
                 <div className="px-3 py-2 border-b border-white/5 mb-1 text-right">
                    <p className="text-sm font-bold truncate">{user.displayName}</p>
                    <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>

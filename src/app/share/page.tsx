@@ -47,15 +47,20 @@ export default function SharePage() {
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [origin, setOrigin] = useState("");
 
   const userId = user?.uid;
   const referralDocRef = useMemo(() => userId ? doc(db, "referrals", userId) : null, [db, userId]);
   const { data: referralData, loading: referralLoading } = useDoc<any>(referralDocRef);
 
-  const initializeShare = async (force = false) => {
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
+  const initializeShare = useCallback(async (force = false) => {
     if (initializationAttempted.current && !force) return;
     
-    const rawResult = localStorage.getItem("ai_assist_pro_result");
+    const rawResult = typeof window !== 'undefined' ? localStorage.getItem("ai_assist_pro_result") : null;
     if (!rawResult && !userId) {
       router.push("/assessment");
       return;
@@ -89,7 +94,7 @@ export default function SharePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, router]);
 
   useEffect(() => {
     if (!referralLoading) {
@@ -106,12 +111,12 @@ export default function SharePage() {
         unlockedFeatures: []
       }, { merge: true });
     }
-  }, [userId, referralLoading, referralData, referralDocRef]);
+  }, [userId, referralLoading, referralData, referralDocRef, initializeShare]);
 
   const referralLink = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return referralData ? `${window.location.origin}/assessment?ref=${referralData.referralCode}` : `${window.location.origin}/assessment`;
-  }, [referralData]);
+    if (!origin) return "";
+    return referralData ? `${origin}/assessment?ref=${referralData.referralCode}` : `${origin}/assessment`;
+  }, [referralData, origin]);
 
   const handleDownloadImage = async () => {
     if (!cardRef.current) return;
@@ -225,14 +230,14 @@ export default function SharePage() {
                 <div className="flex justify-between items-center flex-row-reverse">
                    <div className="flex items-center space-x-2 space-x-reverse">
                      <Cpu className="w-6 h-6 text-primary" />
-                     <span className="font-bold text-xl tracking-tight">AI Assist <span className="text-primary">Pro</span></span>
+                     <span className="font-bold text-xl tracking-tight uppercase">AI Assist <span className="text-primary">Pro</span></span>
                    </div>
                    <Badge className="bg-primary/20 text-primary border-primary/30 uppercase text-[10px] py-1 px-3">إمكانات معتمدة</Badge>
                 </div>
 
                 <div className="flex gap-8 items-center flex-row-reverse">
                    <div className="w-24 h-24 rounded-3xl bg-primary flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.3)] border border-white/20">
-                      <span className="text-4xl font-bold">{data.aiWealthScore}</span>
+                      <span className="text-4xl font-bold text-white">{data.aiWealthScore}</span>
                    </div>
                    <div>
                      <h3 className="text-muted-foreground uppercase text-[10px] tracking-widest mb-1">AI WEALTH SCORE</h3>
@@ -274,7 +279,7 @@ export default function SharePage() {
             <div className="space-y-4">
               <Button 
                 size="lg" 
-                className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-bold shadow-lg shadow-primary/20"
+                className="w-full h-14 bg-primary hover:bg-primary/90 text-lg font-bold shadow-lg shadow-primary/20 rounded-2xl"
                 onClick={handleDownloadImage}
                 disabled={exporting}
               >
@@ -283,30 +288,30 @@ export default function SharePage() {
               </Button>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all" onClick={shareOnWhatsApp}>
+                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all rounded-xl" onClick={shareOnWhatsApp}>
                   <MessageCircle className="w-6 h-6 text-green-500" />
                 </Button>
-                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-blue-400/50 transition-all" onClick={shareOnTwitter}>
+                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-blue-400/50 transition-all rounded-xl" onClick={shareOnTwitter}>
                   <Twitter className="w-6 h-6 text-blue-400" />
                 </Button>
-                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-accent/50 transition-all" onClick={handleNativeShare}>
+                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-accent/50 transition-all rounded-xl" onClick={handleNativeShare}>
                   <Share2 className="w-6 h-6 text-accent" />
                 </Button>
-                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-blue-700/50 transition-all" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${referralLink}`, '_blank')}>
+                <Button variant="outline" className="h-14 border-white/10 hover:bg-white/10 hover:border-blue-700/50 transition-all rounded-xl" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${referralLink}`, '_blank')}>
                   <Linkedin className="w-6 h-6 text-blue-700" />
                 </Button>
               </div>
             </div>
 
-            <Card className="glass-card border-white/5 p-8 bg-white/[0.02] relative overflow-hidden">
+            <Card className="glass-card border-white/5 p-8 bg-white/[0.02] relative overflow-hidden rounded-[2rem]">
                <div className="absolute top-0 left-0 p-4 opacity-10 pointer-events-none">
                  <Gift className="w-24 h-24 text-accent" />
                </div>
                
                <div className="flex items-center gap-3 mb-8 justify-end">
                  <h3 className="text-2xl font-bold">برنامج الإحالة الذكي</h3>
-                 <div className="p-2 rounded-lg bg-accent/10">
-                   <Users className="w-6 h-6 text-accent" />
+                 <div className="p-2 rounded-lg bg-accent/10 text-accent">
+                   <Users className="w-6 h-6" />
                  </div>
                </div>
                
@@ -333,7 +338,7 @@ export default function SharePage() {
                <div className="space-y-3">
                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block text-right">رابط الإحالة الخاص بك</label>
                  <div className="flex gap-2">
-                   <Button size="icon" className="h-12 w-12 bg-white/5 hover:bg-white/10 border border-white/5 shrink-0" onClick={handleCopyLink}>
+                   <Button size="icon" className="h-12 w-12 bg-white/5 hover:bg-white/10 border border-white/5 shrink-0 rounded-xl" onClick={handleCopyLink}>
                      <Copy className="w-5 h-5" />
                    </Button>
                    <div className="flex-1 h-12 flex items-center px-4 rounded-xl bg-white/5 border border-white/5 text-sm font-mono overflow-hidden text-left whitespace-nowrap">
