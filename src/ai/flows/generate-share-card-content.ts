@@ -1,7 +1,6 @@
 'use server';
 /**
  * @fileOverview Share card content generator using Genkit 1.x.
- * Fixed Zod validation and prompt instructions.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -13,15 +12,15 @@ const GenerateShareCardContentInputSchema = z.object({
   achievementBadge: z.string(),
   topOpportunities: z.array(z.string()).min(1),
 });
-export type GenerateShareCardContentInput = z.infer<typeof GenerateShareCardContentInputSchema>;
 
 const GenerateShareCardContentOutputSchema = z.object({
-  aiWealthScore: z.coerce.number().min(0).max(100),
+  aiWealthScore: z.coerce.number(),
   topOpportunityName: z.string(),
-  topThreeOpportunityNames: z.array(z.string()).min(1).max(5),
+  topThreeOpportunityNames: z.array(z.string()).min(1).max(3),
   achievementBadge: z.string(),
   personalizedMessage: z.string(),
 });
+
 export type GenerateShareCardContentOutput = z.infer<typeof GenerateShareCardContentOutputSchema>;
 
 const generateShareCardContentPrompt = ai.definePrompt({
@@ -29,13 +28,9 @@ const generateShareCardContentPrompt = ai.definePrompt({
   model: geminiModel,
   input: { schema: GenerateShareCardContentInputSchema },
   output: { schema: GenerateShareCardContentOutputSchema },
-  config: { temperature: 0.4 },
-  system: `أنت مساعد ذكي لبرنامج "AI Assist Pro". حول بيانات النجاح إلى محتوى بطاقة مشاركة ملهمة.
-أجب بصيغة JSON فقط، دون Markdown.
-يجب أن تحتوي قائمة "topThreeOpportunityNames" على 3 عناصر على الأقل.`,
-  prompt: `قم بتحويل البيانات التالية إلى محتوى بطاقة مشاركة:
-مؤشر الثراء: {{{aiWealthScore}}}
-الملخص: {{{profileSummary}}}
+  system: `أنت مساعد تسويقي. حول النتائج إلى محتوى بطاقة مشاركة ملهمة بصيغة JSON فقط باللغة العربية.`,
+  prompt: `البيانات:
+الدرجة: {{{aiWealthScore}}}
 الوسام: {{{achievementBadge}}}
 الفرص:
 {{#each topOpportunities}}
@@ -44,14 +39,14 @@ const generateShareCardContentPrompt = ai.definePrompt({
 });
 
 export async function generateShareCardContent(
-  input: GenerateShareCardContentInput
+  input: z.infer<typeof GenerateShareCardContentInputSchema>
 ): Promise<GenerateShareCardContentOutput> {
   try {
-    const result = await generateShareCardContentPrompt(input);
-    if (!result.output) throw new Error("EMPTY_OUTPUT");
-    return result.output;
+    const response = await generateShareCardContentPrompt(input);
+    if (!response.output) throw new Error("EMPTY_AI_RESPONSE");
+    return response.output;
   } catch (error: any) {
-    console.error("Share card error:", error);
-    throw new Error("فشل توليد محتوى بطاقة المشاركة.");
+    console.error("Share content error:", error);
+    throw new Error("فشل توليد بيانات المشاركة.");
   }
 }

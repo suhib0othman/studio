@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview Production-hardened Genkit flow for personalized income roadmap generation.
- * Fixed for Genkit 1.x API and TypeScript strict mode.
+ * @fileOverview Production Genkit flow for personalized income roadmap generation.
+ * Uses Genkit 1.x API and Gemini 2.0 Flash.
  */
 
 import { ai, geminiModel } from '@/ai/genkit';
@@ -47,7 +47,7 @@ const GeneratePersonalizedOpportunitiesOutputSchema = z.object({
   growthPotential: z.string(),
   bestBusinessModel: z.string(),
   bestMonetizationMethod: z.string(),
-  opportunities: z.array(OpportunitySchema).min(1).max(10),
+  opportunities: z.array(OpportunitySchema).min(1).max(5),
 });
 
 export type GeneratePersonalizedOpportunitiesInput = z.infer<typeof GeneratePersonalizedOpportunitiesInputSchema>;
@@ -58,59 +58,37 @@ const generateOpportunitiesPrompt = ai.definePrompt({
   model: geminiModel,
   input: { schema: GeneratePersonalizedOpportunitiesInputSchema },
   output: { schema: GeneratePersonalizedOpportunitiesOutputSchema },
-  config: {
-    temperature: 0.2,
-    topP: 0.9,
-  },
-  system: `أنت خبير استراتيجي عالمي في الأعمال والذكاء الاصطناعي.
-مهمتك هي تحليل مدخلات المستخدم وتوليد تقرير "خارطة طريق" بصيغة JSON فقط.
-يجب أن يكون الرد JSON صالحاً تماماً وبدون استخدام Markdown (بدون \`\`\`json).
-استخدم اللغة العربية الاحترافية والملهمة دائماً.`,
-  prompt: `حلل البيانات التالية وقدم تقريراً استشارياً كاملاً بصيغة JSON:
-خبرة المستخدم: {{{primaryExpertise}}}
-الوقت المتاح: {{{availableHoursPerWeek}}}
+  config: { temperature: 0.2 },
+  system: `أنت خبير استراتيجيات الأعمال. حلل المدخلات وقدم تقريراً بصيغة JSON فقط باللغة العربية.`,
+  prompt: `البيانات:
+الخبرة: {{{primaryExpertise}}}
+الوقت: {{{availableHoursPerWeek}}}
 الهدف المالي: {{{incomeGoal}}}
-الميزانية المتاحة: {{{availableBudget}}}
+الميزانية: {{{availableBudget}}}
 المستوى: {{{experienceLevel}}}
-النمط المفضل: {{{workPreference}}}
-النشاط المفضل: {{{preferredActivity}}}
-نقطة القوة: {{{greatestStrength}}}
+النمط: {{{workPreference}}}
+النشاط: {{{preferredActivity}}}
+القوة: {{{greatestStrength}}}
 المخاطرة: {{{riskTolerance}}}
-الهدف الأساسي: {{{primaryGoal}}}`,
+الهدف: {{{primaryGoal}}}`,
 });
-
-function handleGeminiError(error: any): string {
-  const msg = String(error?.message || "").toUpperCase();
-  if (msg.includes('BLOCKED') || msg.includes('SAFETY')) {
-    return "تم حجب المحتوى بسبب قيود السلامة. يرجى تعديل مدخلاتك.";
-  }
-  if (msg.includes('429')) return "تم تجاوز حد الطلبات. يرجى الانتظار دقيقة.";
-  if (msg.includes('500') || msg.includes('503')) return "خدمة الذكاء الاصطناعي غير متاحة حالياً.";
-  return "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.";
-}
 
 export async function generatePersonalizedOpportunities(
   input: GeneratePersonalizedOpportunitiesInput
 ): Promise<GeneratePersonalizedOpportunitiesOutput> {
-  const maxRetries = 3;
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const result = await generateOpportunitiesPrompt(input);
-      const finishReason = String(result.finishReason);
-      if (finishReason === 'blocked' || finishReason === 'other') {
-        throw new Error("blocked");
-      }
-      if (!result.output) {
-        throw new Error("EMPTY_OUTPUT");
-      }
-      return result.output;
-    } catch (error: any) {
-      if (attempt < maxRetries && (String(error.message).includes('429') || error.name === 'ZodError')) {
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1500));
-        continue;
-      }
-      throw new Error(handleGeminiError(error));
+  try {
+    const response = await generateOpportunitiesPrompt(input);
+    
+    if (String(response.finishReason) !== 'STOP') {
+      throw new Error(`AI generation incomplete: ${response.finishReason}`);
     }
+
+    if (!response.output) {
+      throw new Error("لم يتمكن الذكاء الاصطناعي من توليد نتائج. حاول تعديل مدخلاتك.");
+    }
+    return response.output;
+  } catch (error: any) {
+    console.error("AI Generation Error:", error);
+    throw new Error(error.message || "فشل توليد التقرير المخصص.");
   }
-  throw new Error("فشلت عملية توليد التقرير بعد عدة محاولات.");
 }

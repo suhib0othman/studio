@@ -135,14 +135,16 @@ export default function AssessmentPage() {
       });
 
       if (user && db) {
-        await setDoc(doc(db, "results", user.uid), {
+        setDoc(doc(db, "results", user.uid), {
           ...result,
           userId: user.uid,
           createdAt: serverTimestamp(),
         }, { merge: true });
       }
       
-      localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("ai_assist_pro_result", JSON.stringify(result));
+      }
       router.push("/dashboard");
     } catch (err: any) {
       console.error("Submission Error:", err);

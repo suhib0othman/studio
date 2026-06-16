@@ -8,7 +8,6 @@ import {
   Share2, 
   Star, 
   TrendingUp, 
-  Zap, 
   CircleDollarSign,
   BarChart4,
   CheckCircle2,
@@ -40,13 +39,13 @@ export default function DashboardPage() {
   const [localData, setLocalData] = useState<GeneratePersonalizedOpportunitiesOutput | null>(null);
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   const userResultRef = useMemo(() => user ? doc(db, "results", user.uid) : null, [user, db]);
   const { data: firestoreData, loading: firestoreLoading } = useDoc<GeneratePersonalizedOpportunitiesOutput>(userResultRef as any);
 
   useEffect(() => {
-    setIsMounted(true);
+    setHydrated(true);
     const saved = localStorage.getItem("ai_assist_pro_result");
     if (saved) {
       try {
@@ -58,10 +57,10 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (isMounted && !authLoading && !user && !localData && !firestoreData && !firestoreLoading) {
+    if (hydrated && !authLoading && !user && !localData && !firestoreData && !firestoreLoading) {
       router.push("/assessment");
     }
-  }, [isMounted, authLoading, user, localData, firestoreData, firestoreLoading, router]);
+  }, [hydrated, authLoading, user, localData, firestoreData, firestoreLoading, router]);
 
   const data = (firestoreData || localData) as GeneratePersonalizedOpportunitiesOutput | null;
 
@@ -76,22 +75,16 @@ export default function DashboardPage() {
     }
   };
 
-  if (!isMounted) return null;
-
-  if (authLoading || (user && firestoreLoading)) {
+  if (!hydrated || authLoading || (user && firestoreLoading)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="mt-4 text-muted-foreground">جاري تحميل بياناتك...</p>
       </div>
     );
   }
 
-  if (!data) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center">
-       <h2 className="text-2xl font-bold mb-6">لا توجد نتائج لعرضها</h2>
-       <Button onClick={() => router.push("/assessment")}>ابدأ التقييم الآن</Button>
-    </div>
-  );
+  if (!data) return null;
 
   return (
     <div className="min-h-screen pt-24 pb-12" dir="rtl">
@@ -153,7 +146,7 @@ export default function DashboardPage() {
 
         <div className="mb-16">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold">أفضل 5 فرص استثمارية</h2>
+            <h2 className="text-3xl font-bold">أفضل الفرص الاستثمارية</h2>
             <Button onClick={() => router.push("/share")} variant="outline" className="gap-2">
               <Share2 className="w-4 h-4" /> مشاركة النتائج
             </Button>
@@ -190,7 +183,7 @@ export default function DashboardPage() {
         </div>
 
         <Dialog open={!!selectedOpp} onOpenChange={() => setSelectedOpp(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 text-right border-none shadow-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 text-right border-none shadow-2xl bg-card">
             {selectedOpp && (
               <div className="relative">
                 <div className="h-48 bg-gradient-to-l from-primary/30 to-secondary/30 flex items-center px-12">
