@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ import { Progress } from "@/components/ui/progress";
 import { generateShareCardContent, type GenerateShareCardContentOutput } from "@/ai/flows/generate-share-card-content";
 import type { GeneratePersonalizedOpportunitiesOutput } from "@/ai/flows/generate-personalized-opportunities";
 import { toPng } from 'html-to-image';
-import { useAuth, useFirestore, useDoc, useUser } from "@/firebase";
+import { useFirestore, useDoc, useUser } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -54,14 +54,16 @@ export default function SharePage() {
   const { data: referralData, loading: referralLoading } = useDoc<any>(referralDocRef);
 
   useEffect(() => {
-    setOrigin(window.location.origin);
+    if (typeof window !== 'undefined') {
+      setOrigin(window.location.origin);
+    }
   }, []);
 
   const initializeShare = useCallback(async (force = false) => {
     if (initializationAttempted.current && !force) return;
     
     const rawResult = typeof window !== 'undefined' ? localStorage.getItem("ai_assist_pro_result") : null;
-    if (!rawResult && !userId) {
+    if (!rawResult && !user && !loading) {
       router.push("/assessment");
       return;
     }
@@ -94,16 +96,16 @@ export default function SharePage() {
     } finally {
       setLoading(false);
     }
-  }, [userId, router]);
+  }, [user, loading, router]);
 
   useEffect(() => {
     if (!referralLoading) {
       initializeShare();
     }
     
-    if (userId && !referralLoading && !referralData) {
+    if (userId && !referralLoading && !referralData && referralDocRef) {
       const code = userId.substring(0, 6).toUpperCase();
-      setDoc(referralDocRef!, {
+      setDoc(referralDocRef, {
         userId,
         referralCode: code,
         referralCount: 0,
@@ -253,7 +255,7 @@ export default function SharePage() {
                 <div className="pt-4 border-t border-white/10">
                   <h5 className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4">مسارات عالية التوافق</h5>
                   <div className="flex flex-wrap gap-2 justify-end">
-                    {data.topThreeOpportunityNames.slice(1).map(name => (
+                    {data.topThreeOpportunityNames.map(name => (
                       <Badge key={name} variant="outline" className="border-white/10 bg-white/5 px-4 py-1.5 text-xs">{name}</Badge>
                     ))}
                   </div>
